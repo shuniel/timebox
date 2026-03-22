@@ -1680,22 +1680,32 @@ function saveDayData(dateKey) {
   } catch(e) {}
 }
 
+function isWebMode() {
+  return location.protocol === "https:" || location.protocol === "http:";
+}
+
 function saveNow() {
   saveGlobal();
   saveDayData(Ucurdate);
-  // 파일에 데이터 내장해서 다운로드
-  var data = getAllData();
-  var html = document.documentElement.outerHTML;
-  var newTag = '<script id="tbx-data" type="application/json">' + JSON.stringify(data) + '<\/script>';
-  html = html.replace(/<script id="tbx-data"[^>]*>[\s\S]*?<\/script>/, newTag);
-  var blob = new Blob([html], {type:"text/html;charset=utf-8"});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a"); a.href = url; a.download = "타임박스 플래너.html";
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
   var h = document.getElementById("saveHint");
-  h.textContent = "파일 저장됨 " + new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
-  h.style.opacity = 1; setTimeout(function(){ h.style.opacity = 0; }, 3000);
+  if (isWebMode()) {
+    // 웹/PWA 모드: localStorage에만 저장
+    h.textContent = "저장됨 " + new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+    h.style.opacity = 1; setTimeout(function(){ h.style.opacity = 0; }, 3000);
+  } else {
+    // 로컬 파일 모드: 파일에 데이터 내장해서 다운로드
+    var data = getAllData();
+    var html = document.documentElement.outerHTML;
+    var newTag = '<script id="tbx-data" type="application/json">' + JSON.stringify(data) + '<\/script>';
+    html = html.replace(/<script id="tbx-data"[^>]*>[\s\S]*?<\/script>/, newTag);
+    var blob = new Blob([html], {type:"text/html;charset=utf-8"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a"); a.href = url; a.download = "타임박스 플래너.html";
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    h.textContent = "파일 저장됨 " + new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+    h.style.opacity = 1; setTimeout(function(){ h.style.opacity = 0; }, 3000);
+  }
 }
 
 function loadGlobal() {
