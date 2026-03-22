@@ -674,13 +674,20 @@ function gTByText(t) {
 function isGlobalTask(id) { for (var i=0;i<S.tasks.length;i++) if (S.tasks[i].id===id) return true; return false; }
 
 /* ── INIT ───────────────────────────────── */
-loadGlobal();      // tasks, tags, tagOrder
-loadDayData(Ucurdate); // big3, plan, done, memo for today
-updateDateNav();
-buildTable();
-renderAll();
-wireEvents();
-initMob();
+function init() {
+  loadGlobal();
+  loadDayData(Ucurdate);
+  updateDateNav();
+  buildTable();
+  renderAll();
+  wireEvents();
+  initMob();
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
 
 /* ── MOBILE LAYOUT ──────────────────────── */
 function initMob() {
