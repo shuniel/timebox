@@ -1928,8 +1928,11 @@ function renderCal() {
 
 /* ── PDF PRINT ──────────────────────────── */
 function printPDF() {
-  var old = document.getElementById("printTasksPage");
-  if (old) old.parentNode.removeChild(old);
+  // 기존 프린트 페이지 제거
+  var oldK = document.getElementById("printTasksPage");
+  if (oldK) oldK.parentNode.removeChild(oldK);
+
+  // 2페이지: 할 일
   var page = document.createElement("div");
   page.id = "printTasksPage";
   // BIG3
@@ -1978,12 +1981,11 @@ function printPDF() {
   }
   if (allTasks.length === 0) tlhtml += "<p style='color:#aaa;font-size:11px;'>없음</p>";
 
-  // 2컬럼 레이아웃으로 할 일 더 많이 표시
-  page.innerHTML = "<div style='font-family:Nunito,sans-serif;page-break-before:always;'>" +
-    "<div style='display:grid;grid-template-columns:1fr 1fr;gap:16px;'>" +
+  page.innerHTML = "<div style='font-family:Nunito,sans-serif;display:grid;grid-template-columns:1fr 1fr;gap:20px;'>" +
     "<div>" + b3html + "</div>" +
     "<div>" + tlhtml + "</div>" +
-    "</div></div>";
+    "</div>";
+
   document.body.appendChild(page);
   window.print();
   setTimeout(function(){
