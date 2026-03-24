@@ -2034,7 +2034,7 @@ function printPDF() {
   // 태그별 할 일
   var tlhtml = "<h2 style='font-size:13px;font-weight:800;margin:16px 0 8px;color:#2A2118;'>📝 할 일</h2>";
   var allTasks = S.tasks.concat(S.dayTasks);
-  var order = getTagOrder();
+  var order = getOrderedTags().map(function(tg){ return tg.id; });
   // 태그별 그룹
   order.forEach(function(tgid) {
     var tg = gTag(tgid);
