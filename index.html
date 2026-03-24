@@ -2009,66 +2009,47 @@ function attachTooltip(el, text) {
 }
 
 /* ── PDF PRINT ──────────────────────────── */
-function printPDF() {
-  // 기존 print-tasks-page 제거
+printPDF = function() {
   var old = document.getElementById("printTasksPage");
   if (old) old.parentNode.removeChild(old);
-
-  // 할 일 페이지 생성
   var page = document.createElement("div");
   page.id = "printTasksPage";
   page.style.cssText = "display:none;";
-
-  // BIG3
   var b3html = "<h2 style='font-size:13px;font-weight:800;margin:0 0 8px;color:#2A2118;'>⭐ BIG 3</h2>";
   if (S.big3.length) {
-    S.big3.forEach(function(id, i) {
+    S.big3.forEach(function(id) {
       var t = gTask(id); if (!t) return;
       var chk = S.checked.indexOf(id) >= 0;
-      b3html += "<div style='display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;'>" +
-        "<span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;'>" + (chk?"✓":"") + "</span>" +
-        "<span style='" + (chk?"text-decoration:line-through;color:#aaa;":"font-weight:700;") + "'>" + esc(t.text) + "</span></div>";
+      b3html += "<div style='display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;'><span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;'>"+(chk?"✓":"")+"</span><span style='"+(chk?"text-decoration:line-through;color:#aaa;":"font-weight:700;")+"'>"+t.text+"</span></div>";
     });
   } else { b3html += "<p style='color:#aaa;font-size:11px;'>없음</p>"; }
-
-  // 태그별 할 일
   var tlhtml = "<h2 style='font-size:13px;font-weight:800;margin:16px 0 8px;color:#2A2118;'>📝 할 일</h2>";
   var allTasks = S.tasks.concat(S.dayTasks);
-  var order = getOrderedTags().map(function(tg){ return tg.id; });
-  // 태그별 그룹
-  order.forEach(function(tgid) {
-    var tg = gTag(tgid);
-    var items = allTasks.filter(function(t){ return t.tag === tgid; });
+  var order = getOrderedTags();
+  order.forEach(function(tg) {
+    var items = allTasks.filter(function(t){ return t.tag === tg.id; });
     if (!items.length) return;
-    tlhtml += "<div style='margin-bottom:8px;'><div style='display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:" + tg.bg + ";color:" + tg.t + ";border:1px solid " + tg.b + ";margin-bottom:4px;'>" + esc(tg.label) + "</div>";
+    tlhtml += "<div style='margin-bottom:8px;'><div style='display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:"+tg.bg+";color:"+tg.t+";border:1px solid "+tg.b+";margin-bottom:4px;'>"+tg.label+"</div>";
     items.forEach(function(t) {
       var chk = S.checked.indexOf(t.id) >= 0;
-      tlhtml += "<div style='display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11px;'>" +
-        "<span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>" + (chk?"✓":"") + "</span>" +
-        "<span style='" + (chk?"text-decoration:line-through;color:#aaa;":"") + "'>" + esc(t.text) + "</span></div>";
+      tlhtml += "<div style='display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11px;'><span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>"+(chk?"✓":"")+"</span><span style='"+(chk?"text-decoration:line-through;color:#aaa;":"")+"'>"+t.text+"</span></div>";
     });
     tlhtml += "</div>";
   });
-  // 태그 없는 항목
   var noTag = allTasks.filter(function(t){ return !t.tag; });
   if (noTag.length) {
     tlhtml += "<div style='margin-bottom:8px;'><div style='font-size:10px;font-weight:700;color:#888;margin-bottom:4px;'>기타</div>";
     noTag.forEach(function(t) {
       var chk = S.checked.indexOf(t.id) >= 0;
-      tlhtml += "<div style='display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11px;'>" +
-        "<span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>" + (chk?"✓":"") + "</span>" +
-        "<span style='" + (chk?"text-decoration:line-through;color:#aaa;":"") + "'>" + esc(t.text) + "</span></div>";
+      tlhtml += "<div style='display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11px;'><span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>"+(chk?"✓":"")+"</span><span style='"+(chk?"text-decoration:line-through;color:#aaa;":"")+"'>"+t.text+"</span></div>";
     });
     tlhtml += "</div>";
   }
-
-  page.innerHTML = "<div id='printTasksInner'>" + b3html + tlhtml + "</div>";
+  page.innerHTML = "<div id='printTasksInner' style='font-family:Nunito,sans-serif;padding:8mm;'>"+b3html+tlhtml+"</div>";
   document.body.appendChild(page);
   window.print();
 }
-
-function autosave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveToLocal, 1500); }
-
+  
 // 자동저장 — localStorage에만 저장 (파일 다운로드 없음)
 function saveToLocal() {
   saveGlobal();
