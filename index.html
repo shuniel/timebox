@@ -196,7 +196,10 @@ td.tdc.dov{background:#D8E8F8!important;outline:2px dashed #3D5A80;}
 .ci{display:flex;flex-direction:column;gap:2px;min-height:22px;padding:2px 1px;height:100%;}
 
 /* Single-slot chip */
-.chip{display:flex;align-items:center;gap:3px;padding:3px 5px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Nunito',sans-serif;overflow:hidden;width:100%;box-sizing:border-box;}
+.chip{display:flex;align-items:center;gap:3px;padding:3px 5px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Nunito',sans-serif;overflow:hidden;width:100%;box-sizing:border-box;position:relative;}
+/* 칩 툴팁 */
+.chip-tooltip{display:none;position:fixed;background:#2A2118;color:#F0EDE8;font-size:11px;font-weight:700;font-family:'Nunito',sans-serif;padding:6px 10px;border-radius:8px;white-space:nowrap;z-index:9999;pointer-events:none;box-shadow:0 3px 12px rgba(0,0,0,.3);}
+.chip-tooltip.show{display:block;}
 .chip-txt{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.3;}
 .cdel{cursor:pointer;opacity:.5;font-size:9px;margin-left:1px;flex-shrink:0;}
 .cdel:hover{opacity:1;}
@@ -309,6 +312,10 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
   .logo{font-size:14px;}
   .dnav-label{font-size:10px;min-width:90px;}
   .hbtn-save .save-txt{display:none;}
+  header{padding:0 8px;overflow:visible;}
+  .hbtns{gap:4px;flex-shrink:0;}
+  .date-nav{flex-shrink:1;min-width:0;}
+  .logo{flex-shrink:0;}
 }
 
 @media print {
@@ -331,6 +338,9 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
   .b3-item, .tl-item { font-size: 10px !important; padding: 3px 8px !important; }
   .tl-tabs, .tl-tab { display: none !important; }
   .tl-list { display: block !important; }
+  #cTasks { overflow: visible !important; max-height: none !important; }
+  #taskList { overflow: visible !important; max-height: none !important; height: auto !important; }
+  .left { overflow: visible !important; height: auto !important; }
 
   /* 시간표 */
   .table-wrap { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
@@ -582,7 +592,7 @@ var TCOLORS = [
   /* 뮤트 블루그레이 */
   {bg:"#9ECFCD", b:"#6ECBCA", t:"#0D3040"}
 ];
-var SLOT_MIN = 30; // 30 or 15 — controlled by settings
+var SLOT_MIN = 15; // fixed to 15min
 
 function getDurs() {
   if (SLOT_MIN === 15) return [
@@ -1203,6 +1213,8 @@ function refreshCells() {
               chip.style.cssText = "background:" + colors.bg + ";border:1.5px solid " + colors.b + ";color:" + colors.t + ";border-radius:4px;width:100%;height:calc(100% - 4px);min-height:20px;box-sizing:border-box;display:block;";
               chip.innerHTML = '';
             }
+            // 툴팁 (전체 텍스트 표시)
+            attachTooltip(chip, t.text + dl);
             segStartTd.querySelector(".ci").appendChild(chip);
 
             idx += slotsInThisRow;
@@ -1542,8 +1554,9 @@ function genMd() {
   if (!S.big3.length) md += "> 선택된 항목 없음\n";
   else for (var bi=0; bi<S.big3.length; bi++) { var bt=gTask(S.big3[bi]); if(bt) md+="- [ ] **0"+(bi+1)+". "+bt.text+"**"+(bt.tag?" `"+bt.tag+"`":"")+"\n"; }
   md += "\n## 📝 전체 할 일\n\n";
-  if (!S.tasks.length) md += "> 없음\n";
-  else for (var ti=0; ti<S.tasks.length; ti++) { var tt=S.tasks[ti]; md+="- [ ] "+tt.text+(tt.tag?" `"+tt.tag+"`":"")+"\n"; }
+  var allT = S.tasks.concat(S.dayTasks);
+  if (!allT.length) md += "> 없음\n";
+  else for (var ti=0; ti<allT.length; ti++) { var tt=allT[ti]; var chk=S.checked.indexOf(tt.id)>=0; md+="- ["+(chk?"x":" ")+"] "+tt.text+(tt.tag?" `"+tt.tag+"`":"")+"\n"; }
   md += "\n## 🗓 타임박싱\n\n| 시간 | PLAN | DONE |\n|------|------|------|\n";
   for (var si=0; si<SLOTS.length; si++) { var sl=SLOTS[si]; var pp=stxt(S.plan,sl),dd=stxt(S.done,sl); if(pp||dd) md+="| "+sl+" | "+pp+" | "+dd+" |\n"; }
   if (S.memo) md += "\n## 📌 메모\n\n" + S.memo + "\n";
@@ -1721,7 +1734,7 @@ function loadGlobal() {
     var embedded = document.getElementById("tbx-data");
     if (embedded && embedded.textContent.trim() !== "{}") {
       var ed = JSON.parse(embedded.textContent);
-      if (ed.slotMin === 15) { SLOT_MIN = 15; rebuildSlots(); }
+      SLOT_MIN = 15;
       if (ed.global) {
         var g = ed.global;
         S.tasks = g.tasks || [];
@@ -1743,8 +1756,7 @@ function loadGlobal() {
   } catch(e) { console.error(e); }
 
   // 2) 내장 데이터 없으면 localStorage 폴백
-  var savedMin = localStorage.getItem("tbx_slotMin");
-  if (savedMin === "15") { SLOT_MIN = 15; rebuildSlots(); }
+  SLOT_MIN = 15;
   try {
     var raw = localStorage.getItem(GLOBAL_KEY);
     if (!raw) { S.tags = JSON.parse(JSON.stringify(DTAGS)); return; }
@@ -1945,6 +1957,46 @@ function renderCal() {
 }
 
 var saveTimer = null;
+/* ── CHIP TOOLTIP ───────────────────────── */
+var _tt = null, _ttTimer = null;
+function showTooltip(text, e) {
+  var tip = document.getElementById("chipTooltip");
+  tip.textContent = text;
+  tip.className = "chip-tooltip show";
+  posTooltip(e);
+}
+function posTooltip(e) {
+  var tip = document.getElementById("chipTooltip");
+  var x = e.clientX, y = e.clientY;
+  var tw = tip.offsetWidth, th = tip.offsetHeight;
+  if (x + tw + 12 > window.innerWidth) x = x - tw - 8;
+  else x = x + 10;
+  if (y - th - 8 < 0) y = y + 20;
+  else y = y - th - 8;
+  tip.style.left = x + "px";
+  tip.style.top = y + "px";
+}
+function hideTooltip() {
+  var tip = document.getElementById("chipTooltip");
+  tip.className = "chip-tooltip";
+  clearTimeout(_ttTimer);
+}
+function attachTooltip(el, text) {
+  // 마우스
+  el.addEventListener("mouseenter", function(e){ _ttTimer = setTimeout(function(){ showTooltip(text, e); }, 600); });
+  el.addEventListener("mousemove", function(e){ if(document.getElementById("chipTooltip").classList.contains("show")) posTooltip(e); });
+  el.addEventListener("mouseleave", hideTooltip);
+  // 터치 (길게 누르기)
+  el.addEventListener("touchstart", function(e){
+    _ttTimer = setTimeout(function(){
+      var t = e.touches[0];
+      showTooltip(text, {clientX: t.clientX, clientY: t.clientY});
+    }, 500);
+  }, {passive:true});
+  el.addEventListener("touchend", hideTooltip);
+  el.addEventListener("touchmove", hideTooltip);
+}
+
 function autosave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveToLocal, 1500); }
 
 // 자동저장 — localStorage에만 저장 (파일 다운로드 없음)
@@ -1961,5 +2013,6 @@ if ("serviceWorker" in navigator) {
   });
 }
 </script>
+<div class="chip-tooltip" id="chipTooltip"></div>
 </body>
 </html>
