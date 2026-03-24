@@ -196,10 +196,7 @@ td.tdc.dov{background:#D8E8F8!important;outline:2px dashed #3D5A80;}
 .ci{display:flex;flex-direction:column;gap:2px;min-height:22px;padding:2px 1px;height:100%;}
 
 /* Single-slot chip */
-.chip{display:flex;align-items:center;gap:3px;padding:3px 5px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Nunito',sans-serif;overflow:hidden;width:100%;box-sizing:border-box;position:relative;}
-/* 칩 툴팁 */
-.chip-tooltip{display:none;position:fixed;background:#2A2118;color:#F0EDE8;font-size:11px;font-weight:700;font-family:'Nunito',sans-serif;padding:6px 10px;border-radius:8px;white-space:nowrap;z-index:9999;pointer-events:none;box-shadow:0 3px 12px rgba(0,0,0,.3);}
-.chip-tooltip.show{display:block;}
+.chip{display:flex;align-items:center;gap:3px;padding:3px 5px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Nunito',sans-serif;overflow:hidden;width:100%;box-sizing:border-box;}
 .chip-txt{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.3;}
 .cdel{cursor:pointer;opacity:.5;font-size:9px;margin-left:1px;flex-shrink:0;}
 .cdel:hover{opacity:1;}
@@ -312,10 +309,6 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
   .logo{font-size:14px;}
   .dnav-label{font-size:10px;min-width:90px;}
   .hbtn-save .save-txt{display:none;}
-  header{padding:0 8px;overflow:visible;}
-  .hbtns{gap:4px;flex-shrink:0;}
-  .date-nav{flex-shrink:1;min-width:0;}
-  .logo{flex-shrink:0;}
 }
 
 @media print {
@@ -338,9 +331,6 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
   .b3-item, .tl-item { font-size: 10px !important; padding: 3px 8px !important; }
   .tl-tabs, .tl-tab { display: none !important; }
   .tl-list { display: block !important; }
-  #cTasks { overflow: visible !important; max-height: none !important; }
-  #taskList { overflow: visible !important; max-height: none !important; height: auto !important; }
-  .left { overflow: visible !important; height: auto !important; }
 
   /* 시간표 */
   .table-wrap { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
@@ -353,10 +343,6 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
 
   /* 페이지 여백 */
   @page { margin: 10mm 8mm; size: A4 landscape; }
-
-  /* 할 일 별도 페이지 */
-  #printTasksPage { display: block !important; page-break-before: always; }
-  #printTasksInner { font-family: 'Nunito', sans-serif; padding: 8mm; }
 }
 </style>
 <link rel="manifest" href="manifest.json">
@@ -593,7 +579,7 @@ var TCOLORS = [
   /* 뮤트 블루그레이 */
   {bg:"#9ECFCD", b:"#6ECBCA", t:"#0D3040"}
 ];
-var SLOT_MIN = 15; // fixed to 15min
+var SLOT_MIN = 15;
 
 function getDurs() {
   if (SLOT_MIN === 15) return [
@@ -643,7 +629,7 @@ var Umd = 1;      // modal dur
 var Umti = null;  // modal tag id
 var Ute = 0;      // tag creator emoji idx
 var Utc = 0;      // tag creator color idx
-var Uvw = "tag";  // task list view: "tag" only
+var Uvw = "tag";
 var UdragTagId = null; // dragging tag group id
 
 /* ── DATE KEYS ──────────────────────────── */
@@ -727,6 +713,7 @@ function showTab(tab) {
 function wireEvents() {
   document.getElementById("btnSave").addEventListener("click", saveNow);
   document.getElementById("btnPdf").addEventListener("click", printPDF);
+  document.getElementById("btnPdf").addEventListener("click", function(){ window.print(); });
   document.getElementById("tpClose").addEventListener("click", closeTagPicker);
   document.getElementById("tpOv").addEventListener("click", function(e){ if(e.target===this) closeTagPicker(); });
   document.getElementById("btnCfg").addEventListener("click", openCfg);
@@ -1213,8 +1200,6 @@ function refreshCells() {
               chip.style.cssText = "background:" + colors.bg + ";border:1.5px solid " + colors.b + ";color:" + colors.t + ";border-radius:4px;width:100%;height:calc(100% - 4px);min-height:20px;box-sizing:border-box;display:block;";
               chip.innerHTML = '';
             }
-            // 툴팁 (전체 텍스트 표시)
-            attachTooltip(chip, t.text + dl);
             segStartTd.querySelector(".ci").appendChild(chip);
 
             idx += slotsInThisRow;
@@ -1554,9 +1539,8 @@ function genMd() {
   if (!S.big3.length) md += "> 선택된 항목 없음\n";
   else for (var bi=0; bi<S.big3.length; bi++) { var bt=gTask(S.big3[bi]); if(bt) md+="- [ ] **0"+(bi+1)+". "+bt.text+"**"+(bt.tag?" `"+bt.tag+"`":"")+"\n"; }
   md += "\n## 📝 전체 할 일\n\n";
-  var allT = S.tasks.concat(S.dayTasks);
-  if (!allT.length) md += "> 없음\n";
-  else for (var ti=0; ti<allT.length; ti++) { var tt=allT[ti]; var chk=S.checked.indexOf(tt.id)>=0; md+="- ["+(chk?"x":" ")+"] "+tt.text+(tt.tag?" `"+tt.tag+"`":"")+"\n"; }
+  if (!S.tasks.length) md += "> 없음\n";
+  else for (var ti=0; ti<S.tasks.length; ti++) { var tt=S.tasks[ti]; md+="- [ ] "+tt.text+(tt.tag?" `"+tt.tag+"`":"")+"\n"; }
   md += "\n## 🗓 타임박싱\n\n| 시간 | PLAN | DONE |\n|------|------|------|\n";
   for (var si=0; si<SLOTS.length; si++) { var sl=SLOTS[si]; var pp=stxt(S.plan,sl),dd=stxt(S.done,sl); if(pp||dd) md+="| "+sl+" | "+pp+" | "+dd+" |\n"; }
   if (S.memo) md += "\n## 📌 메모\n\n" + S.memo + "\n";
@@ -1703,17 +1687,14 @@ function saveDayData(dateKey) {
 function isWebMode() {
   return location.protocol === "https:" || location.protocol === "http:";
 }
-
 function saveNow() {
   saveGlobal();
   saveDayData(Ucurdate);
   var h = document.getElementById("saveHint");
   if (isWebMode()) {
-    // 웹/PWA 모드: localStorage에만 저장
     h.textContent = "저장됨 " + new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
     h.style.opacity = 1; setTimeout(function(){ h.style.opacity = 0; }, 3000);
   } else {
-    // 로컬 파일 모드: 파일에 데이터 내장해서 다운로드
     var data = getAllData();
     var html = document.documentElement.outerHTML;
     var newTag = '<script id="tbx-data" type="application/json">' + JSON.stringify(data) + '<\/script>';
@@ -1734,7 +1715,7 @@ function loadGlobal() {
     var embedded = document.getElementById("tbx-data");
     if (embedded && embedded.textContent.trim() !== "{}") {
       var ed = JSON.parse(embedded.textContent);
-      SLOT_MIN = 15;
+      if (ed.slotMin === 15) { SLOT_MIN = 15; rebuildSlots(); }
       if (ed.global) {
         var g = ed.global;
         S.tasks = g.tasks || [];
@@ -1756,7 +1737,8 @@ function loadGlobal() {
   } catch(e) { console.error(e); }
 
   // 2) 내장 데이터 없으면 localStorage 폴백
-  SLOT_MIN = 15;
+  var savedMin = localStorage.getItem("tbx_slotMin");
+  if (savedMin === "15") { SLOT_MIN = 15; rebuildSlots(); }
   try {
     var raw = localStorage.getItem(GLOBAL_KEY);
     if (!raw) { S.tags = JSON.parse(JSON.stringify(DTAGS)); return; }
@@ -1956,100 +1938,71 @@ function renderCal() {
   }
 }
 
-var saveTimer = null;
-/* ── CHIP TOOLTIP ───────────────────────── */
-var _tt = null, _ttTimer = null;
-function showTooltip(text, e) {
-  var tip = document.getElementById("chipTooltip");
-  tip.textContent = text;
-  tip.className = "chip-tooltip show";
-  posTooltip(e);
-}
-function posTooltip(e) {
-  var tip = document.getElementById("chipTooltip");
-  var x = e.clientX, y = e.clientY;
-  var tw = tip.offsetWidth, th = tip.offsetHeight;
-  if (x + tw + 12 > window.innerWidth) x = x - tw - 8;
-  else x = x + 10;
-  if (y - th - 8 < 0) y = y + 20;
-  else y = y - th - 8;
-  tip.style.left = x + "px";
-  tip.style.top = y + "px";
-}
-function hideTooltip() {
-  var tip = document.getElementById("chipTooltip");
-  tip.className = "chip-tooltip";
-  clearTimeout(_ttTimer);
-}
-function attachTooltip(el, text) {
-  // 마우스 호버
-  el.addEventListener("mouseenter", function(e){ _ttTimer = setTimeout(function(){ showTooltip(text, e); }, 500); });
-  el.addEventListener("mousemove", function(e){ if(document.getElementById("chipTooltip").classList.contains("show")) posTooltip(e); });
-  el.addEventListener("mouseleave", hideTooltip);
-  // 터치: 더블탭으로 툴팁 토글 (길게 누르기 대신)
-  var lastTap = 0;
-  el.addEventListener("touchend", function(e) {
-    var now = Date.now();
-    if (now - lastTap < 350) {
-      // 더블탭
-      e.preventDefault();
-      e.stopPropagation();
-      var tip = document.getElementById("chipTooltip");
-      if (tip.classList.contains("show")) {
-        hideTooltip();
-      } else {
-        var t = e.changedTouches[0];
-        showTooltip(text, {clientX: t.clientX, clientY: t.clientY});
-        // 3초 후 자동 숨김
-        setTimeout(hideTooltip, 3000);
-      }
-    }
-    lastTap = now;
-  });
-}
 
 /* ── PDF PRINT ──────────────────────────── */
-printPDF = function() {
+function printPDF() {
   var old = document.getElementById("printTasksPage");
   if (old) old.parentNode.removeChild(old);
   var page = document.createElement("div");
   page.id = "printTasksPage";
-  page.style.cssText = "display:none;";
-  var b3html = "<h2 style='font-size:13px;font-weight:800;margin:0 0 8px;color:#2A2118;'>⭐ BIG 3</h2>";
+  // BIG3
+  var b3html = "<h2 style='font-size:14px;font-weight:800;margin:0 0 10px;color:#2A2118;border-bottom:2px solid #E0D8CC;padding-bottom:6px;'>⭐ BIG 3</h2>";
   if (S.big3.length) {
-    S.big3.forEach(function(id) {
-      var t = gTask(id); if (!t) return;
-      var chk = S.checked.indexOf(id) >= 0;
-      b3html += "<div style='display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;'><span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;'>"+(chk?"✓":"")+"</span><span style='"+(chk?"text-decoration:line-through;color:#aaa;":"font-weight:700;")+"'>"+t.text+"</span></div>";
-    });
+    for (var bi=0; bi<S.big3.length; bi++) {
+      var bt = gTask(S.big3[bi]); if (!bt) continue;
+      var bchk = S.checked.indexOf(S.big3[bi]) >= 0;
+      b3html += "<div style='display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12px;'>" +
+        "<span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>"+(bchk?"✓":"")+"</span>" +
+        "<span style='"+(bchk?"text-decoration:line-through;color:#aaa;":"font-weight:700;color:#2A2118;")+"'>"+ bt.text +"</span></div>";
+    }
   } else { b3html += "<p style='color:#aaa;font-size:11px;'>없음</p>"; }
-  var tlhtml = "<h2 style='font-size:13px;font-weight:800;margin:16px 0 8px;color:#2A2118;'>📝 할 일</h2>";
+
+  // 태그별 할 일
+  var tlhtml = "<h2 style='font-size:14px;font-weight:800;margin:16px 0 10px;color:#2A2118;border-bottom:2px solid #E0D8CC;padding-bottom:6px;'>📝 할 일</h2>";
   var allTasks = S.tasks.concat(S.dayTasks);
-  var order = getOrderedTags();
-  order.forEach(function(tg) {
+  var orderedTags = getOrderedTags();
+  for (var oi=0; oi<orderedTags.length; oi++) {
+    var tg = orderedTags[oi];
     var items = allTasks.filter(function(t){ return t.tag === tg.id; });
-    if (!items.length) return;
-    tlhtml += "<div style='margin-bottom:8px;'><div style='display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:"+tg.bg+";color:"+tg.t+";border:1px solid "+tg.b+";margin-bottom:4px;'>"+tg.label+"</div>";
-    items.forEach(function(t) {
-      var chk = S.checked.indexOf(t.id) >= 0;
-      tlhtml += "<div style='display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11px;'><span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>"+(chk?"✓":"")+"</span><span style='"+(chk?"text-decoration:line-through;color:#aaa;":"")+"'>"+t.text+"</span></div>";
-    });
-    tlhtml += "</div>";
-  });
-  var noTag = allTasks.filter(function(t){ return !t.tag; });
-  if (noTag.length) {
-    tlhtml += "<div style='margin-bottom:8px;'><div style='font-size:10px;font-weight:700;color:#888;margin-bottom:4px;'>기타</div>";
-    noTag.forEach(function(t) {
-      var chk = S.checked.indexOf(t.id) >= 0;
-      tlhtml += "<div style='display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11px;'><span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>"+(chk?"✓":"")+"</span><span style='"+(chk?"text-decoration:line-through;color:#aaa;":"")+"'>"+t.text+"</span></div>";
-    });
+    if (!items.length) continue;
+    tlhtml += "<div style='margin-bottom:10px;'>" +
+      "<div style='display:inline-block;padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;background:"+tg.bg+";color:"+tg.t+";border:1px solid "+tg.b+";margin-bottom:5px;'>"+tg.label+"</div>";
+    for (var ii=0; ii<items.length; ii++) {
+      var ti2 = items[ii];
+      var chk2 = S.checked.indexOf(ti2.id) >= 0;
+      tlhtml += "<div style='display:flex;align-items:center;gap:8px;padding:3px 4px;font-size:11px;'>" +
+        "<span style='width:13px;height:13px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:12px;font-size:9px;flex-shrink:0;'>"+(chk2?"✓":"")+"</span>" +
+        "<span style='"+(chk2?"text-decoration:line-through;color:#aaa;":"color:#1A1A1A;")+"'>"+ ti2.text +"</span></div>";
+    }
     tlhtml += "</div>";
   }
-  page.innerHTML = "<div id='printTasksInner' style='font-family:Nunito,sans-serif;padding:8mm;'>"+b3html+tlhtml+"</div>";
+  // 태그 없는 항목
+  var noTag = allTasks.filter(function(t){ return !t.tag; });
+  if (noTag.length) {
+    tlhtml += "<div style='margin-bottom:10px;'><div style='font-size:10px;font-weight:700;color:#888;margin-bottom:5px;'>기타</div>";
+    for (var ni=0; ni<noTag.length; ni++) {
+      var nt = noTag[ni];
+      var nchk = S.checked.indexOf(nt.id) >= 0;
+      tlhtml += "<div style='display:flex;align-items:center;gap:8px;padding:3px 4px;font-size:11px;'>" +
+        "<span style='width:13px;height:13px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:12px;font-size:9px;flex-shrink:0;'>"+(nchk?"✓":"")+"</span>" +
+        "<span style='"+(nchk?"text-decoration:line-through;color:#aaa;":"color:#1A1A1A;")+"'>"+ nt.text +"</span></div>";
+    }
+    tlhtml += "</div>";
+  }
+  if (allTasks.length === 0) tlhtml += "<p style='color:#aaa;font-size:11px;'>없음</p>";
+
+  page.innerHTML = "<div style='font-family:Nunito,sans-serif;'>" + b3html + tlhtml + "</div>";
   document.body.appendChild(page);
   window.print();
+  setTimeout(function(){
+    var p = document.getElementById("printTasksPage");
+    if (p) p.parentNode.removeChild(p);
+  }, 2000);
 }
-  
+
+var saveTimer = null;
+function autosave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveToLocal, 1500); }
+
 // 자동저장 — localStorage에만 저장 (파일 다운로드 없음)
 function saveToLocal() {
   saveGlobal();
@@ -2057,13 +2010,11 @@ function saveToLocal() {
 }
 </script>
 <script>
-// 기존 서비스 워커 완전 제거
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.getRegistrations().then(function(regs) {
     regs.forEach(function(r) { r.unregister(); });
   });
 }
 </script>
-<div class="chip-tooltip" id="chipTooltip"></div>
 </body>
 </html>
