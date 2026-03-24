@@ -353,6 +353,10 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
 
   /* 페이지 여백 */
   @page { margin: 10mm 8mm; size: A4 landscape; }
+
+  /* 할 일 별도 페이지 */
+  #printTasksPage { display: block !important; page-break-before: always; }
+  #printTasksInner { font-family: 'Nunito', sans-serif; padding: 8mm; }
 }
 </style>
 <link rel="manifest" href="manifest.json">
@@ -397,10 +401,7 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
         <button class="tcbtn" id="btnEditTags">✎ 태그</button>
       </div>
       <!-- View tabs -->
-      <div class="vtabs">
-        <button class="vtab on" id="vtAll">전체</button>
-        <button class="vtab" id="vtTag">태그별</button>
-      </div>
+
       <div id="taskList"></div>
       <div class="arow">
         <input id="ni" placeholder="새 할 일 추가...">
@@ -642,7 +643,7 @@ var Umd = 1;      // modal dur
 var Umti = null;  // modal tag id
 var Ute = 0;      // tag creator emoji idx
 var Utc = 0;      // tag creator color idx
-var Uvw = "all";  // task list view: "all" | "tag"
+var Uvw = "tag";  // task list view: "tag" only
 var UdragTagId = null; // dragging tag group id
 
 /* ── DATE KEYS ──────────────────────────── */
@@ -725,7 +726,7 @@ function showTab(tab) {
 /* ── WIRE EVENTS ────────────────────────── */
 function wireEvents() {
   document.getElementById("btnSave").addEventListener("click", saveNow);
-  document.getElementById("btnPdf").addEventListener("click", function(){ window.print(); });
+  document.getElementById("btnPdf").addEventListener("click", printPDF);
   document.getElementById("tpClose").addEventListener("click", closeTagPicker);
   document.getElementById("tpOv").addEventListener("click", function(e){ if(e.target===this) closeTagPicker(); });
   document.getElementById("btnCfg").addEventListener("click", openCfg);
@@ -750,8 +751,7 @@ function wireEvents() {
   document.getElementById("tsOv").addEventListener("click", function(e){ if(e.target===this) closeTS(); });
 
   // View tabs
-  document.getElementById("vtAll").addEventListener("click", function(){ Uvw="all"; document.getElementById("vtAll").className="vtab on"; document.getElementById("vtTag").className="vtab"; renderTL(); });
-  document.getElementById("vtTag").addEventListener("click", function(){ Uvw="tag"; document.getElementById("vtTag").className="vtab on"; document.getElementById("vtAll").className="vtab"; renderTL(); });
+
 
   // Cell modal
   document.getElementById("cClose").addEventListener("click", closeCM);
@@ -1982,19 +1982,89 @@ function hideTooltip() {
   clearTimeout(_ttTimer);
 }
 function attachTooltip(el, text) {
-  // 마우스
-  el.addEventListener("mouseenter", function(e){ _ttTimer = setTimeout(function(){ showTooltip(text, e); }, 600); });
+  // 마우스 호버
+  el.addEventListener("mouseenter", function(e){ _ttTimer = setTimeout(function(){ showTooltip(text, e); }, 500); });
   el.addEventListener("mousemove", function(e){ if(document.getElementById("chipTooltip").classList.contains("show")) posTooltip(e); });
   el.addEventListener("mouseleave", hideTooltip);
-  // 터치 (길게 누르기)
-  el.addEventListener("touchstart", function(e){
-    _ttTimer = setTimeout(function(){
-      var t = e.touches[0];
-      showTooltip(text, {clientX: t.clientX, clientY: t.clientY});
-    }, 500);
-  }, {passive:true});
-  el.addEventListener("touchend", hideTooltip);
-  el.addEventListener("touchmove", hideTooltip);
+  // 터치: 더블탭으로 툴팁 토글 (길게 누르기 대신)
+  var lastTap = 0;
+  el.addEventListener("touchend", function(e) {
+    var now = Date.now();
+    if (now - lastTap < 350) {
+      // 더블탭
+      e.preventDefault();
+      e.stopPropagation();
+      var tip = document.getElementById("chipTooltip");
+      if (tip.classList.contains("show")) {
+        hideTooltip();
+      } else {
+        var t = e.changedTouches[0];
+        showTooltip(text, {clientX: t.clientX, clientY: t.clientY});
+        // 3초 후 자동 숨김
+        setTimeout(hideTooltip, 3000);
+      }
+    }
+    lastTap = now;
+  });
+}
+
+/* ── PDF PRINT ──────────────────────────── */
+function printPDF() {
+  // 기존 print-tasks-page 제거
+  var old = document.getElementById("printTasksPage");
+  if (old) old.parentNode.removeChild(old);
+
+  // 할 일 페이지 생성
+  var page = document.createElement("div");
+  page.id = "printTasksPage";
+  page.style.cssText = "display:none;";
+
+  // BIG3
+  var b3html = "<h2 style='font-size:13px;font-weight:800;margin:0 0 8px;color:#2A2118;'>⭐ BIG 3</h2>";
+  if (S.big3.length) {
+    S.big3.forEach(function(id, i) {
+      var t = gTask(id); if (!t) return;
+      var chk = S.checked.indexOf(id) >= 0;
+      b3html += "<div style='display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;'>" +
+        "<span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;'>" + (chk?"✓":"") + "</span>" +
+        "<span style='" + (chk?"text-decoration:line-through;color:#aaa;":"font-weight:700;") + "'>" + esc(t.text) + "</span></div>";
+    });
+  } else { b3html += "<p style='color:#aaa;font-size:11px;'>없음</p>"; }
+
+  // 태그별 할 일
+  var tlhtml = "<h2 style='font-size:13px;font-weight:800;margin:16px 0 8px;color:#2A2118;'>📝 할 일</h2>";
+  var allTasks = S.tasks.concat(S.dayTasks);
+  var order = getTagOrder();
+  // 태그별 그룹
+  order.forEach(function(tgid) {
+    var tg = gTag(tgid);
+    var items = allTasks.filter(function(t){ return t.tag === tgid; });
+    if (!items.length) return;
+    tlhtml += "<div style='margin-bottom:8px;'><div style='display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:" + tg.bg + ";color:" + tg.t + ";border:1px solid " + tg.b + ";margin-bottom:4px;'>" + esc(tg.label) + "</div>";
+    items.forEach(function(t) {
+      var chk = S.checked.indexOf(t.id) >= 0;
+      tlhtml += "<div style='display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11px;'>" +
+        "<span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>" + (chk?"✓":"") + "</span>" +
+        "<span style='" + (chk?"text-decoration:line-through;color:#aaa;":"") + "'>" + esc(t.text) + "</span></div>";
+    });
+    tlhtml += "</div>";
+  });
+  // 태그 없는 항목
+  var noTag = allTasks.filter(function(t){ return !t.tag; });
+  if (noTag.length) {
+    tlhtml += "<div style='margin-bottom:8px;'><div style='font-size:10px;font-weight:700;color:#888;margin-bottom:4px;'>기타</div>";
+    noTag.forEach(function(t) {
+      var chk = S.checked.indexOf(t.id) >= 0;
+      tlhtml += "<div style='display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11px;'>" +
+        "<span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>" + (chk?"✓":"") + "</span>" +
+        "<span style='" + (chk?"text-decoration:line-through;color:#aaa;":"") + "'>" + esc(t.text) + "</span></div>";
+    });
+    tlhtml += "</div>";
+  }
+
+  page.innerHTML = "<div id='printTasksInner'>" + b3html + tlhtml + "</div>";
+  document.body.appendChild(page);
+  window.print();
 }
 
 function autosave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveToLocal, 1500); }
