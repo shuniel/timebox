@@ -311,26 +311,7 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
   .hbtn-save .save-txt{display:none;}
 }
 
-@media print {
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  /* 공통 숨김 */
-  header, .tab-bar, .modal-ov, .cfg-ov, .obs-ov,
-  button, .save-hint, .add-row, .brain-card, input, .cdel, .sdel { display: none !important; }
-  body { background: #fff !important; margin: 0; }
-  /* 1페이지: 시간표만 */
-  .left { display: none !important; }
-  .layout { display: block !important; padding: 0 !important; }
-  .right { display: block !important; width: 100% !important; padding: 0 !important; }
-  .table-wrap { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
-  table { width: 100% !important; font-size: 10px !important; }
-  td, th { padding: 2px 4px !important; }
-  .memo-wrap { border: none !important; box-shadow: none !important; }
-  textarea.memo-ta { border: none !important; resize: none !important; font-size: 10px !important; }
-  /* 2페이지: 할 일 */
-  #printTasksPage { display: block !important; }
-  @page :first { size: A4 landscape; margin: 8mm; }
-  @page { size: A4 portrait; margin: 12mm; }
-}
+/* print handled by popup window */
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2A2118">
@@ -1927,71 +1908,99 @@ function renderCal() {
 
 
 /* ── PDF PRINT ──────────────────────────── */
-function printPDF() {
-  // 기존 프린트 페이지 제거
-  var oldK = document.getElementById("printTasksPage");
-  if (oldK) oldK.parentNode.removeChild(oldK);
+function makePrintHTML() {
+  // 날짜
+  var dateStr = document.getElementById("todayLabel").textContent;
 
-  // 2페이지: 할 일
-  var page = document.createElement("div");
-  page.id = "printTasksPage";
+  // 시간표 HTML
+  var tableHTML = document.querySelector(".tbl").outerHTML;
+  var memoVal = document.querySelector(".memo-ta") ? document.querySelector(".memo-ta").value : "";
+
   // BIG3
-  var b3html = "<h2 style='font-size:16px;font-weight:800;margin:0 0 12px;color:#2A2118;border-bottom:2px solid #E0D8CC;padding-bottom:6px;'>⭐ BIG 3</h2>";
+  var b3html = "";
   if (S.big3.length) {
     for (var bi=0; bi<S.big3.length; bi++) {
       var bt = gTask(S.big3[bi]); if (!bt) continue;
       var bchk = S.checked.indexOf(S.big3[bi]) >= 0;
-      b3html += "<div style='display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:12px;'>" +
-        "<span style='width:14px;height:14px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:13px;font-size:9px;flex-shrink:0;'>"+(bchk?"✓":"")+"</span>" +
-        "<span style='"+(bchk?"text-decoration:line-through;color:#aaa;":"font-weight:700;color:#2A2118;")+"'>"+ bt.text +"</span></div>";
+      b3html += "<div class='task-row'><span class='chk'>"+(bchk?"✓":"")+"</span>" +
+        "<span class='"+(bchk?"done":"")+"'>"+ bt.text +"</span></div>";
     }
-  } else { b3html += "<p style='color:#aaa;font-size:11px;'>없음</p>"; }
+  } else { b3html = "<p class='empty'>없음</p>"; }
 
   // 태그별 할 일
-  var tlhtml = "<h2 style='font-size:16px;font-weight:800;margin:0 0 12px;color:#2A2118;border-bottom:2px solid #E0D8CC;padding-bottom:6px;'>📝 할 일</h2>";
+  var tlhtml = "";
   var allTasks = S.tasks.concat(S.dayTasks);
   var orderedTags = getOrderedTags();
   for (var oi=0; oi<orderedTags.length; oi++) {
     var tg = orderedTags[oi];
     var items = allTasks.filter(function(t){ return t.tag === tg.id; });
     if (!items.length) continue;
-    tlhtml += "<div style='margin-bottom:10px;'>" +
-      "<div style='display:inline-block;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700;background:"+tg.bg+";color:"+tg.t+";border:1px solid "+tg.b+";margin-bottom:5px;'>"+tg.label+"</div>";
+    tlhtml += "<div class='tag-group'><div class='tag-badge' style='background:"+tg.bg+";color:"+tg.t+";border:1px solid "+tg.b+"'>"+tg.label+"</div>";
     for (var ii=0; ii<items.length; ii++) {
       var ti2 = items[ii];
       var chk2 = S.checked.indexOf(ti2.id) >= 0;
-      tlhtml += "<div style='display:flex;align-items:center;gap:8px;padding:3px 4px;font-size:11px;'>" +
-        "<span style='width:13px;height:13px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:12px;font-size:9px;flex-shrink:0;'>"+(chk2?"✓":"")+"</span>" +
-        "<span style='"+(chk2?"text-decoration:line-through;color:#aaa;":"color:#1A1A1A;")+"'>"+ ti2.text +"</span></div>";
+      tlhtml += "<div class='task-row'><span class='chk'>"+(chk2?"✓":"")+"</span><span class='"+(chk2?"done":"")+"'>"+ ti2.text +"</span></div>";
     }
     tlhtml += "</div>";
   }
-  // 태그 없는 항목
   var noTag = allTasks.filter(function(t){ return !t.tag; });
   if (noTag.length) {
-    tlhtml += "<div style='margin-bottom:10px;'><div style='font-size:10px;font-weight:700;color:#888;margin-bottom:5px;'>기타</div>";
+    tlhtml += "<div class='tag-group'><div class='tag-label-etc'>기타</div>";
     for (var ni=0; ni<noTag.length; ni++) {
-      var nt = noTag[ni];
-      var nchk = S.checked.indexOf(nt.id) >= 0;
-      tlhtml += "<div style='display:flex;align-items:center;gap:8px;padding:3px 4px;font-size:11px;'>" +
-        "<span style='width:13px;height:13px;border:1.5px solid #888;border-radius:3px;display:inline-block;text-align:center;line-height:12px;font-size:9px;flex-shrink:0;'>"+(nchk?"✓":"")+"</span>" +
-        "<span style='"+(nchk?"text-decoration:line-through;color:#aaa;":"color:#1A1A1A;")+"'>"+ nt.text +"</span></div>";
+      var nt = noTag[ni]; var nchk = S.checked.indexOf(nt.id) >= 0;
+      tlhtml += "<div class='task-row'><span class='chk'>"+(nchk?"✓":"")+"</span><span class='"+(nchk?"done":"")+"'>"+nt.text+"</span></div>";
     }
     tlhtml += "</div>";
   }
-  if (allTasks.length === 0) tlhtml += "<p style='color:#aaa;font-size:11px;'>없음</p>";
+  if (allTasks.length === 0) tlhtml = "<p class='empty'>없음</p>";
 
-  page.innerHTML = "<div style='font-family:Nunito,sans-serif;display:grid;grid-template-columns:1fr 1fr;gap:20px;'>" +
-    "<div>" + b3html + "</div>" +
-    "<div>" + tlhtml + "</div>" +
-    "</div>";
+  return "<!DOCTYPE html><html><head><meta charset='UTF-8'>" +
+  "<style>" +
+  "* { -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; margin:0; padding:0; }" +
+  "body { font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 12px; color: #1A1A1A; }" +
+  "@page { size: A4 portrait; margin: 10mm; }" +
+  ".page { page-break-after: always; padding: 4mm; }" +
+  ".page:last-child { page-break-after: auto; }" +
+  ".page-title { font-size:15px; font-weight:800; color:#2A2118; border-bottom:2px solid #E0D8CC; padding-bottom:5px; margin-bottom:10px; }" +
+  "/* 시간표 */" +
+  "table { width:100%; border-collapse:collapse; font-size:9px; }" +
+  "thead tr:first-child { background:#2A2118; color:#F0EDE8; }" +
+  "thead tr:last-child { background:#352A20; color:#C4BAA0; }" +
+  "th, td { padding:2px 3px; border:1px solid #E0D8CC; vertical-align:top; }" +
+  ".chip { display:inline-block; padding:1px 4px; border-radius:4px; font-size:8px; font-weight:700; overflow:hidden; white-space:nowrap; max-width:100%; }" +
+  ".memo-box { margin-top:6px; padding:6px; border:1px solid #E0D8CC; border-radius:6px; font-size:11px; white-space:pre-wrap; min-height:30px; }" +
+  "/* 할 일 */" +
+  ".two-col { display:grid; grid-template-columns:1fr 1fr; gap:12mm; }" +
+  ".section-title { font-size:14px; font-weight:800; color:#2A2118; border-bottom:2px solid #E0D8CC; padding-bottom:5px; margin-bottom:10px; }" +
+  ".tag-group { margin-bottom:8px; }" +
+  ".tag-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-bottom:4px; }" +
+  ".tag-label-etc { font-size:10px; font-weight:700; color:#888; margin-bottom:4px; }" +
+  ".task-row { display:flex; align-items:center; gap:6px; padding:2px 2px; font-size:12px; }" +
+  ".chk { width:13px; height:13px; border:1.5px solid #888; border-radius:3px; display:inline-flex; align-items:center; justify-content:center; font-size:9px; flex-shrink:0; }" +
+  ".done { text-decoration:line-through; color:#aaa; }" +
+  ".empty { color:#aaa; font-size:11px; }" +
+  "</style></head><body>" +
+  "<div class='page'>" +
+  "<div class='page-title'>⏱ TimeBox — " + dateStr + "</div>" +
+  tableHTML +
+  (memoVal ? "<div class='memo-box'>📌 메모<br>" + memoVal + "</div>" : "") +
+  "</div>" +
+  "<div class='page'>" +
+  "<div class='page-title'>⏱ TimeBox — " + dateStr + " · 할 일</div>" +
+  "<div class='two-col'>" +
+  "<div><div class='section-title'>⭐ BIG 3</div>" + b3html + "</div>" +
+  "<div><div class='section-title'>📝 할 일</div>" + tlhtml + "</div>" +
+  "</div></div>" +
+  "</body></html>";
+}
 
-  document.body.appendChild(page);
-  window.print();
-  setTimeout(function(){
-    var p = document.getElementById("printTasksPage");
-    if (p) p.parentNode.removeChild(p);
-  }, 3000);
+function printPDF() {
+  var w = window.open("", "_blank", "width=800,height=600");
+  if (!w) { alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요."); return; }
+  w.document.write(makePrintHTML());
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ w.print(); }, 800);
 }
 
 var saveTimer = null;
