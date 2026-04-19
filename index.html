@@ -21,7 +21,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 body{display:flex;flex-direction:column;}
 
 /* ─ HEADER ─ */
-header{background:#2A2118;height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:0 0 14px 14px;}
+header{background:#2A2118;height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:0 0 14px 14px;position:relative;}
 .logo{color:#FDF8F0;font-size:18px;font-weight:800;white-space:nowrap;}
 .date-nav{display:flex;align-items:center;gap:6px;flex:1;justify-content:center;}
 .dnav-btn{background:rgba(255,255,255,.1);border:none;color:#C4BAA0;width:26px;height:26px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .12s;}
@@ -60,11 +60,14 @@ header{background:#2A2118;height:52px;flex-shrink:0;display:flex;align-items:cen
 .cal-day-empty{cursor:default;}
 .cal-day.future{opacity:.2;cursor:default;pointer-events:none;}
 .hbtns{display:flex;gap:6px;align-items:center;}
-.save-hint{font-family:'JetBrains Mono',monospace;font-size:10px;color:#7A6A58;transition:opacity .4s;}
+.save-hint{font-family:'JetBrains Mono',monospace;font-size:10px;color:#8ACC9B;transition:opacity .4s;position:absolute;top:54px;right:10px;background:#2A2118;padding:3px 8px;border-radius:8px;z-index:100;pointer-events:none;}
 button.hbtn{padding:5px 13px;border-radius:20px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:none;}
 .hbtn:hover{opacity:.82;}
 .hbtn-save{background:rgba(255,255,255,.12);color:#C4BAA0;}
 .hbtn-pdf{background:#6B4C9A;color:#EDE0FF;}
+/* 하단 저장 버튼 */
+.mtab-save{background:#2D7A55;color:#D4F5E4;border:none;border-radius:10px;padding:6px 14px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;}
+.mtab-save:hover{opacity:.85;}
 
 .hbtn-cfg{background:rgba(255,255,255,.1);color:#C4BAA0;padding:5px 10px;font-size:14px;}
 .cfg-tog{flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--line);background:var(--row);color:var(--ink2);font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .12s;}
@@ -332,13 +335,7 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
       <div class="cal-pop" id="calPop"></div>
     </div>
   </div>
-  <div class="hbtns">
-    <span class="save-hint" id="saveHint" style="opacity:0"></span>
-    <button class="hbtn hbtn-cfg" id="btnCfg" title="설정">⚙</button>
-    <button class="hbtn hbtn-save" id="btnSave">💾 저장</button>
-    <button class="hbtn hbtn-pdf" id="btnPdf"><span class="pdf-txt">🖨 PDF 저장</span></button>
-    <button class="hbtn hbtn-obs" id="btnObs"><span class="obs-txt">📋 옵시디언 내보내기</span></button>
-  </div>
+  <span class="save-hint" id="saveHint" style="opacity:0"></span>
 </header>
 
 <div class="workspace">
@@ -371,21 +368,34 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
 
   <!-- RIGHT panel (table + memo) -->
   <div class="right" id="rightPanel">
-    <div class="table-wrap">
-      <table class="tbl">
+    <!-- PLAN 테이블 -->
+    <div class="table-wrap" id="wrapPlan">
+      <table class="tbl" id="tblPlan">
         <thead>
           <tr class="r1">
             <th class="th-h" rowspan="2">시간</th>
-            <th class="th-pl" colspan="2">📋 PLAN</th>
-            <th class="th-dv" rowspan="2"></th>
-            <th class="th-dn" colspan="2">✅ DONE</th>
+            <th class="th-pl" colspan="4">📋 PLAN</th>
           </tr>
-          <tr class="r2">
-            <th class="th-sub">:00</th><th class="th-sub">:30</th>
-            <th class="th-sub">:00</th><th class="th-sub">:30</th>
+          <tr class="r2" id="r2Plan">
+            <th class="th-sub">:00</th><th class="th-sub">:15</th><th class="th-sub">:30</th><th class="th-sub">:45</th>
           </tr>
         </thead>
-        <tbody id="tbody"></tbody>
+        <tbody id="tbodyPlan"></tbody>
+      </table>
+    </div>
+    <!-- DONE 테이블 -->
+    <div class="table-wrap" id="wrapDone" style="display:none">
+      <table class="tbl" id="tblDone">
+        <thead>
+          <tr class="r1">
+            <th class="th-h" rowspan="2">시간</th>
+            <th class="th-dn" colspan="4">✅ DONE</th>
+          </tr>
+          <tr class="r2" id="r2Done">
+            <th class="th-sub">:00</th><th class="th-sub">:15</th><th class="th-sub">:30</th><th class="th-sub">:45</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyDone"></tbody>
       </table>
     </div>
     <div class="memo-wrap">
@@ -398,7 +408,9 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
 <!-- Mobile tabs -->
 <nav class="mobtabs" id="mobtabs">
   <button class="mtab" data-tab="plan"><span class="ti">✏️</span>플래닝</button>
-  <button class="mtab active" data-tab="table"><span class="ti">📋</span>시간표</button>
+  <button class="mtab active" data-tab="tplan"><span class="ti">📋</span>플랜</button>
+  <button class="mtab" data-tab="tdone"><span class="ti">✅</span>던</button>
+  <button class="mtab-save" id="btnSave">💾</button>
 </nav>
 
 <!-- CELL MODAL -->
@@ -561,7 +573,7 @@ function getDurs() {
 }
 
 var HOURS = [];
-for (var _h = 7; _h <= 25; _h++) { HOURS.push(String(_h % 24).padStart(2, "0")); }
+for (var _h = 5; _h <= 25; _h++) { HOURS.push(String(_h % 24).padStart(2, "0")); }
 var SLOTS = [];
 function rebuildSlots() {
   SLOTS = [];
@@ -657,16 +669,20 @@ if (document.readyState === "loading") {
 /* ── MOBILE LAYOUT ──────────────────────── */
 function initMob() {
   if (window.innerWidth < 768) {
-    showTab("table");
+    showTab("tplan");
   }
 }
 
 function showTab(tab) {
   var left = document.getElementById("leftPanel");
   var right = document.getElementById("rightPanel");
-  if (tab === "table") {
+  var wrapPlan = document.getElementById("wrapPlan");
+  var wrapDone = document.getElementById("wrapDone");
+  if (tab === "tplan" || tab === "tdone") {
     left.classList.remove("mob");
     right.classList.add("mob");
+    wrapPlan.style.display = (tab === "tplan") ? "" : "none";
+    wrapDone.style.display = (tab === "tdone") ? "" : "none";
   } else {
     right.classList.remove("mob");
     left.classList.add("mob");
@@ -680,14 +696,13 @@ function showTab(tab) {
 /* ── WIRE EVENTS ────────────────────────── */
 function wireEvents() {
   document.getElementById("btnSave").addEventListener("click", saveNow);
-  document.getElementById("btnPdf").addEventListener("click", printPDF);
-  document.getElementById("btnPdf").addEventListener("click", function(){ window.print(); });
+  // PDF: 버튼 제거됨
   document.getElementById("tpClose").addEventListener("click", closeTagPicker);
   document.getElementById("tpOv").addEventListener("click", function(e){ if(e.target===this) closeTagPicker(); });
-  document.getElementById("btnCfg").addEventListener("click", openCfg);
+  // CFG: 헤더에서 제거됨
   document.getElementById("cfgClose").addEventListener("click", closeCfg);
   document.getElementById("cfgOv").addEventListener("click", function(e){ if(e.target===this) closeCfg(); });
-  document.getElementById("btnObs").addEventListener("click", openObs);
+  // OBS: 헤더에서 제거됨
   document.getElementById("btnPrevDay").addEventListener("click", function(){ navDay(-1); });
   document.getElementById("btnNextDay").addEventListener("click", function(){ navDay(+1); });
   document.getElementById("btnCal").addEventListener("click", function(e){ e.stopPropagation(); toggleCal(); });
@@ -1035,41 +1050,25 @@ function mkTaskItem(t, container, showTag) {
 
 /* ── TABLE BUILD ────────────────────────── */
 function buildTable() {
-  // Update thead
-  var r2 = document.querySelector("tr.r2");
-  if (SLOT_MIN === 15) {
-    document.querySelector("th.th-pl").setAttribute("colspan","4");
-    document.querySelector("th.th-dn").setAttribute("colspan","4");
-    r2.innerHTML = '<th class="th-sub">:00</th><th class="th-sub">:15</th><th class="th-sub">:30</th><th class="th-sub">:45</th>' +
-                   '<th class="th-sub">:00</th><th class="th-sub">:15</th><th class="th-sub">:30</th><th class="th-sub">:45</th>';
-  } else {
-    document.querySelector("th.th-pl").setAttribute("colspan","2");
-    document.querySelector("th.th-dn").setAttribute("colspan","2");
-    r2.innerHTML = '<th class="th-sub">:00</th><th class="th-sub">:30</th>' +
-                   '<th class="th-sub">:00</th><th class="th-sub">:30</th>';
-  }
-
-  var tb = document.getElementById("tbody"); tb.innerHTML = "";
+  var tbP = document.getElementById("tbodyPlan"); tbP.innerHTML = "";
+  var tbD = document.getElementById("tbodyDone"); tbD.innerHTML = "";
   for (var hi = 0; hi < HOURS.length; hi++) {
     var hh = HOURS[hi];
-    var ng = parseInt(hh, 10) < 7;
-    var bg = ng ? "#F4EEE4" : "#FFFDF8";
+    var ng = (parseInt(hh, 10) >= 0 && parseInt(hh, 10) < 5);
+    var bg  = ng ? "#F4EEE4" : "#FFFDF8";
     var bgd = ng ? "#F0F4EC" : "#FAFFFC";
-    var tr = document.createElement("tr");
-    var tdh = document.createElement("td"); tdh.className = "td-h" + (ng?" ng":""); tdh.textContent = hh + ":00";
-    tr.appendChild(tdh);
-    if (SLOT_MIN === 15) {
-      tr.appendChild(mkCell(hh+":00","plan",bg)); tr.appendChild(mkCell(hh+":15","plan",bg));
-      tr.appendChild(mkCell(hh+":30","plan",bg)); tr.appendChild(mkCell(hh+":45","plan",bg));
-      var dv = document.createElement("td"); dv.className = "td-dv"; tr.appendChild(dv);
-      tr.appendChild(mkCell(hh+":00","done",bgd)); tr.appendChild(mkCell(hh+":15","done",bgd));
-      tr.appendChild(mkCell(hh+":30","done",bgd)); tr.appendChild(mkCell(hh+":45","done",bgd));
-    } else {
-      tr.appendChild(mkCell(hh+":00","plan",bg)); tr.appendChild(mkCell(hh+":30","plan",bg));
-      var dv2 = document.createElement("td"); dv2.className = "td-dv"; tr.appendChild(dv2);
-      tr.appendChild(mkCell(hh+":00","done",bgd)); tr.appendChild(mkCell(hh+":30","done",bgd));
-    }
-    tb.appendChild(tr);
+    // PLAN 행
+    var trP = document.createElement("tr");
+    var tdhP = document.createElement("td"); tdhP.className = "td-h" + (ng?" ng":""); tdhP.textContent = hh + ":00"; trP.appendChild(tdhP);
+    trP.appendChild(mkCell(hh+":00","plan",bg)); trP.appendChild(mkCell(hh+":15","plan",bg));
+    trP.appendChild(mkCell(hh+":30","plan",bg)); trP.appendChild(mkCell(hh+":45","plan",bg));
+    tbP.appendChild(trP);
+    // DONE 행
+    var trD = document.createElement("tr");
+    var tdhD = document.createElement("td"); tdhD.className = "td-h" + (ng?" ng":""); tdhD.textContent = hh + ":00"; trD.appendChild(tdhD);
+    trD.appendChild(mkCell(hh+":00","done",bgd)); trD.appendChild(mkCell(hh+":15","done",bgd));
+    trD.appendChild(mkCell(hh+":30","done",bgd)); trD.appendChild(mkCell(hh+":45","done",bgd));
+    tbD.appendChild(trD);
   }
 }
 
