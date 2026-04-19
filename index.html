@@ -21,7 +21,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 body{display:flex;flex-direction:column;}
 
 /* ─ HEADER ─ */
-header{background:#2A2118;height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:0 0 14px 14px;position:relative;}
+header{background:#2A2118;height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:0;position:relative;}
 .logo{color:#FDF8F0;font-size:18px;font-weight:800;white-space:nowrap;}
 .date-nav{display:flex;align-items:center;gap:6px;flex:1;justify-content:center;}
 .dnav-btn{background:rgba(255,255,255,.1);border:none;color:#C4BAA0;width:26px;height:26px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .12s;}
@@ -86,7 +86,10 @@ button.hbtn{padding:5px 13px;border-radius:20px;font-family:'Nunito',sans-serif;
 .table-wrap::-webkit-scrollbar{width:5px;height:5px;}
 .table-wrap::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px;}
 
-.memo-wrap{flex-shrink:0;background:var(--card);border-radius:14px;border:1px solid var(--line);padding:12px;box-shadow:var(--sh);}
+.memo-wrap{flex-shrink:0;background:var(--card);border-radius:0;border:none;border-top:1px solid var(--line);padding:12px;}
+.memo-panel{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.memo-panel .memo-wrap{flex:1;display:flex;flex-direction:column;}
+.memo-panel .memo-ta{flex:1;min-height:0;max-height:none;}
 .memo-head{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--ink2);margin-bottom:7px;}
 textarea.memo-ta{width:100%;min-height:68px;max-height:120px;padding:9px;resize:vertical;outline:none;background:var(--row);border:1.5px solid var(--line);border-radius:10px;font-family:'Nunito',sans-serif;font-size:12px;line-height:1.7;color:var(--ink);}
 textarea.memo-ta:focus{border-color:var(--acc);}
@@ -278,7 +281,7 @@ button.cfbtn:disabled{opacity:.3;cursor:default;}
 .odl:hover{opacity:.85;}
 
 /* ─ MOBILE ─ */
-nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16px 0 0;padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:4px;}
+nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:4px;}
 .mtab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:10px;cursor:pointer;border:none;background:transparent;color:#7A6A58;font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;}
 .mtab .ti{font-size:18px;line-height:1;}
 .mtab.active{background:rgba(255,255,255,.12);color:#FDF8F0;}
@@ -286,6 +289,8 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
 @media(max-width:767px){
   :root{--cw:100px;}
   nav.mobtabs{display:flex;}
+  .memo-panel{display:none;}
+  .memo-panel.mob-show{display:flex!important;}
   .workspace{padding:0;gap:0;overflow:hidden;}
   /* Left panel: full width scrollable, all cards visible */
   .left{width:100%;height:100%;display:none;overflow-y:auto;padding:10px 10px 12px;border-radius:0;border:none;box-shadow:none;background:var(--bg);flex:none;}
@@ -398,10 +403,14 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
         <tbody id="tbodyDone"></tbody>
       </table>
     </div>
-    <div class="memo-wrap">
-      <div class="memo-head">📌 메모</div>
-      <textarea class="memo-ta" id="memoArea" placeholder="오늘의 메모, 생각, 회고를 자유롭게..."></textarea>
-    </div>
+  </div>
+</div>
+
+<!-- 메모 패널 -->
+<div class="memo-panel" id="memoPanel" style="display:none">
+  <div class="memo-wrap">
+    <div class="memo-head">📌 메모</div>
+    <textarea class="memo-ta" id="memoArea" placeholder="오늘의 메모, 생각, 회고를 자유롭게..."></textarea>
   </div>
 </div>
 
@@ -410,7 +419,9 @@ nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:16px 16p
   <button class="mtab" data-tab="plan"><span class="ti">✏️</span>플래닝</button>
   <button class="mtab active" data-tab="tplan"><span class="ti">📋</span>플랜</button>
   <button class="mtab" data-tab="tdone"><span class="ti">✅</span>던</button>
+  <button class="mtab" data-tab="memo"><span class="ti">📝</span>메모</button>
   <button class="mtab-save" id="btnSave">💾</button>
+  <button class="mtab-save" id="btnPdf" style="background:#6B4C9A;color:#EDE0FF;">🖨</button>
 </nav>
 
 <!-- CELL MODAL -->
@@ -676,15 +687,21 @@ function initMob() {
 function showTab(tab) {
   var left = document.getElementById("leftPanel");
   var right = document.getElementById("rightPanel");
+  var memoPanel = document.getElementById("memoPanel");
   var wrapPlan = document.getElementById("wrapPlan");
   var wrapDone = document.getElementById("wrapDone");
+  // 모두 숨기기
+  left.classList.remove("mob");
+  right.classList.remove("mob");
+  memoPanel.style.display = "none";
   if (tab === "tplan" || tab === "tdone") {
-    left.classList.remove("mob");
     right.classList.add("mob");
     wrapPlan.style.display = (tab === "tplan") ? "" : "none";
     wrapDone.style.display = (tab === "tdone") ? "" : "none";
+  } else if (tab === "memo") {
+    memoPanel.style.display = "flex";
+    memoPanel.classList.add("mob-show");
   } else {
-    right.classList.remove("mob");
     left.classList.add("mob");
   }
   var tabs = document.querySelectorAll(".mtab");
@@ -1907,26 +1924,16 @@ function renderCal() {
 
 
 /* ── PDF PRINT ──────────────────────────── */
-function makePrintHTML() {
-  // 날짜
-  var dateStr = document.getElementById("todayLabel").textContent;
-
-  // 시간표 HTML
-  var tableHTML = document.querySelector(".tbl").outerHTML;
-  var memoVal = document.querySelector(".memo-ta") ? document.querySelector(".memo-ta").value : "";
-
-  // BIG3
+function makeTaskHTML(dateStr) {
   var b3html = "";
   if (S.big3.length) {
     for (var bi=0; bi<S.big3.length; bi++) {
       var bt = gTask(S.big3[bi]); if (!bt) continue;
       var bchk = S.checked.indexOf(S.big3[bi]) >= 0;
-      b3html += "<div class='task-row'><span class='chk'>"+(bchk?"✓":"")+"</span>" +
-        "<span class='"+(bchk?"done":"")+"'>"+ bt.text +"</span></div>";
+      b3html += "<div class='task-row'><span class='chk'>"+(bchk?"✓":"")+"</span><span class='"+(bchk?"done":"")+"'>"+bt.text+"</span></div>";
     }
   } else { b3html = "<p class='empty'>없음</p>"; }
 
-  // 태그별 할 일
   var tlhtml = "";
   var allTasks = S.tasks.concat(S.dayTasks);
   var orderedTags = getOrderedTags();
@@ -1936,9 +1943,8 @@ function makePrintHTML() {
     if (!items.length) continue;
     tlhtml += "<div class='tag-group'><div class='tag-badge' style='background:"+tg.bg+";color:"+tg.t+";border:1px solid "+tg.b+"'>"+tg.label+"</div>";
     for (var ii=0; ii<items.length; ii++) {
-      var ti2 = items[ii];
-      var chk2 = S.checked.indexOf(ti2.id) >= 0;
-      tlhtml += "<div class='task-row'><span class='chk'>"+(chk2?"✓":"")+"</span><span class='"+(chk2?"done":"")+"'>"+ ti2.text +"</span></div>";
+      var ti2=items[ii], chk2=S.checked.indexOf(ti2.id)>=0;
+      tlhtml += "<div class='task-row'><span class='chk'>"+(chk2?"✓":"")+"</span><span class='"+(chk2?"done":"")+"'>"+ti2.text+"</span></div>";
     }
     tlhtml += "</div>";
   }
@@ -1946,51 +1952,58 @@ function makePrintHTML() {
   if (noTag.length) {
     tlhtml += "<div class='tag-group'><div class='tag-label-etc'>기타</div>";
     for (var ni=0; ni<noTag.length; ni++) {
-      var nt = noTag[ni]; var nchk = S.checked.indexOf(nt.id) >= 0;
+      var nt=noTag[ni], nchk=S.checked.indexOf(nt.id)>=0;
       tlhtml += "<div class='task-row'><span class='chk'>"+(nchk?"✓":"")+"</span><span class='"+(nchk?"done":"")+"'>"+nt.text+"</span></div>";
     }
     tlhtml += "</div>";
   }
   if (allTasks.length === 0) tlhtml = "<p class='empty'>없음</p>";
+  return "<div class='page'><div class='page-title'>✏️ 플래닝 — " + dateStr + "</div><div class='two-col'><div><div class='section-title'>⭐ BIG 3</div>" + b3html + "</div><div><div class='section-title'>📝 할 일</div>" + tlhtml + "</div></div></div>";
+}
 
-  return "<!DOCTYPE html><html><head><meta charset='UTF-8'>" +
-  "<style>" +
-  "* { -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; margin:0; padding:0; }" +
-  "body { font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 12px; color: #1A1A1A; }" +
-  "@page { size: A4 portrait; margin: 10mm; }" +
-  ".page { page-break-after: always; padding: 4mm; }" +
-  ".page:last-child { page-break-after: auto; }" +
-  ".page-title { font-size:15px; font-weight:800; color:#2A2118; border-bottom:2px solid #E0D8CC; padding-bottom:5px; margin-bottom:10px; }" +
-  "/* 시간표 */" +
-  "table { width:100%; border-collapse:collapse; font-size:9px; }" +
-  "thead tr:first-child { background:#2A2118; color:#F0EDE8; }" +
-  "thead tr:last-child { background:#352A20; color:#C4BAA0; }" +
-  "th, td { padding:2px 3px; border:1px solid #E0D8CC; vertical-align:top; }" +
-  ".chip { display:inline-block; padding:1px 4px; border-radius:4px; font-size:8px; font-weight:700; overflow:hidden; white-space:nowrap; max-width:100%; }" +
-  ".memo-box { margin-top:6px; padding:6px; border:1px solid #E0D8CC; border-radius:6px; font-size:11px; white-space:pre-wrap; min-height:30px; }" +
-  "/* 할 일 */" +
-  ".two-col { display:grid; grid-template-columns:1fr 1fr; gap:12mm; }" +
-  ".section-title { font-size:14px; font-weight:800; color:#2A2118; border-bottom:2px solid #E0D8CC; padding-bottom:5px; margin-bottom:10px; }" +
-  ".tag-group { margin-bottom:8px; }" +
-  ".tag-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-bottom:4px; }" +
-  ".tag-label-etc { font-size:10px; font-weight:700; color:#888; margin-bottom:4px; }" +
-  ".task-row { display:flex; align-items:center; gap:6px; padding:2px 2px; font-size:12px; }" +
-  ".chk { width:13px; height:13px; border:1.5px solid #888; border-radius:3px; display:inline-flex; align-items:center; justify-content:center; font-size:9px; flex-shrink:0; }" +
-  ".done { text-decoration:line-through; color:#aaa; }" +
-  ".empty { color:#aaa; font-size:11px; }" +
-  "</style></head><body>" +
-  "<div class='page'>" +
-  "<div class='page-title'>⏱ TimeBox — " + dateStr + "</div>" +
-  tableHTML +
-  (memoVal ? "<div class='memo-box'>📌 메모<br>" + memoVal + "</div>" : "") +
-  "</div>" +
-  "<div class='page'>" +
-  "<div class='page-title'>⏱ TimeBox — " + dateStr + " · 할 일</div>" +
-  "<div class='two-col'>" +
-  "<div><div class='section-title'>⭐ BIG 3</div>" + b3html + "</div>" +
-  "<div><div class='section-title'>📝 할 일</div>" + tlhtml + "</div>" +
-  "</div></div>" +
-  "</body></html>";
+function makeTablePageHTML(dateStr, col) {
+  var tbId = col === "plan" ? "tbodyPlan" : "tbodyDone";
+  var tblId = col === "plan" ? "tblPlan" : "tblDone";
+  var tbl = document.getElementById(tblId);
+  var tableHTML = tbl ? tbl.outerHTML : "";
+  var label = col === "plan" ? "📋 플랜" : "✅ 던";
+  return "<div class='page'><div class='page-title'>" + label + " — " + dateStr + "</div>" + tableHTML + "</div>";
+}
+
+function makePrintHTML() {
+  var dateStr = document.getElementById("todayLabel").textContent;
+  var memoVal = document.getElementById("memoArea") ? document.getElementById("memoArea").value : "";
+  var css = "* { -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; margin:0; padding:0; }" +
+    "body { font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 12px; color: #1A1A1A; }" +
+    "@page { size: A4 portrait; margin: 10mm; }" +
+    ".page { page-break-after: always; padding: 2mm; min-height: 1px; }" +
+    ".page:last-child { page-break-after: auto; }" +
+    ".page-title { font-size:14px; font-weight:800; color:#2A2118; border-bottom:2px solid #E0D8CC; padding-bottom:5px; margin-bottom:8px; }" +
+    "table { width:100%; border-collapse:collapse; font-size:8px; }" +
+    "thead tr:first-child { background:#2A2118 !important; color:#F0EDE8 !important; -webkit-print-color-adjust:exact; }" +
+    "thead tr:last-child { background:#352A20 !important; color:#C4BAA0 !important; }" +
+    "th, td { padding:2px 3px; border:1px solid #E0D8CC; vertical-align:top; }" +
+    "td { background-color: inherit !important; }" +
+    ".chip { display:inline-block; padding:1px 4px; border-radius:4px; font-size:7px; font-weight:700; overflow:hidden; white-space:nowrap; max-width:100%; }" +
+    ".memo-box { margin-top:8px; padding:8px; border:1px solid #E0D8CC; font-size:12px; white-space:pre-wrap; min-height:40px; }" +
+    ".two-col { display:grid; grid-template-columns:1fr 1fr; gap:10mm; }" +
+    ".section-title { font-size:13px; font-weight:800; color:#2A2118; border-bottom:1.5px solid #E0D8CC; padding-bottom:4px; margin-bottom:8px; }" +
+    ".tag-group { margin-bottom:8px; }" +
+    ".tag-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-bottom:4px; }" +
+    ".tag-label-etc { font-size:10px; font-weight:700; color:#888; margin-bottom:4px; }" +
+    ".task-row { display:flex; align-items:center; gap:6px; padding:2px; font-size:12px; }" +
+    ".chk { width:13px; height:13px; border:1.5px solid #888; border-radius:3px; display:inline-flex; align-items:center; justify-content:center; font-size:9px; flex-shrink:0; }" +
+    ".done { text-decoration:line-through; color:#aaa; }" +
+    ".empty { color:#aaa; font-size:11px; }";
+
+  // 4페이지: 플래닝 / 플랜 / 던 / 메모
+  var p1 = makeTaskHTML(dateStr);
+  var p2 = makeTablePageHTML(dateStr, "plan");
+  var p3 = makeTablePageHTML(dateStr, "done");
+  var p4 = "<div class='page'><div class='page-title'>📝 메모 — " + dateStr + "</div>" +
+    "<div class='memo-box'>" + (memoVal || "<span style='color:#aaa'>내용 없음</span>") + "</div></div>";
+
+  return "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>" + css + "</style></head><body>" + p1 + p2 + p3 + p4 + "</body></html>";
 }
 
 function printPDF() {
