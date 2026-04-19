@@ -281,14 +281,15 @@ button.cfbtn:disabled{opacity:.3;cursor:default;}
 .odl:hover{opacity:.85;}
 
 /* ─ MOBILE ─ */
-nav.mobtabs{display:none;flex-shrink:0;background:#2A2118;border-radius:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:4px;}
+nav.mobtabs{display:flex;flex-direction:row;align-items:center;flex-shrink:0;background:#2A2118;border-radius:0;padding:6px;gap:4px;overflow-x:auto;}
 .mtab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:10px;cursor:pointer;border:none;background:transparent;color:#7A6A58;font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;}
 .mtab .ti{font-size:18px;line-height:1;}
 .mtab.active{background:rgba(255,255,255,.12);color:#FDF8F0;}
+@media(min-width:768px){ nav.mobtabs{display:none;} }
 
 @media(max-width:767px){
   :root{--cw:100px;}
-  nav.mobtabs{display:flex;}
+  /* nav.mobtabs always flex */
   /* memo-panel은 showTab으로 제어 */
   .workspace{padding:0;gap:0;overflow:hidden;}
   /* Left panel: full width scrollable, all cards visible */
@@ -1927,95 +1928,72 @@ function renderCal() {
 
 
 /* ── PDF PRINT ──────────────────────────── */
-function makeTaskHTML(dateStr) {
-  var b3html = "";
-  if (S.big3.length) {
-    for (var bi=0; bi<S.big3.length; bi++) {
-      var bt = gTask(S.big3[bi]); if (!bt) continue;
-      var bchk = S.checked.indexOf(S.big3[bi]) >= 0;
-      b3html += "<div class='task-row'><span class='chk'>"+(bchk?"✓":"")+"</span><span class='"+(bchk?"done":"")+"'>"+bt.text+"</span></div>";
-    }
-  } else { b3html = "<p class='empty'>없음</p>"; }
-
-  var tlhtml = "";
-  var allTasks = S.tasks.concat(S.dayTasks);
-  var orderedTags = getOrderedTags();
-  for (var oi=0; oi<orderedTags.length; oi++) {
-    var tg = orderedTags[oi];
-    var items = allTasks.filter(function(t){ return t.tag === tg.id; });
-    if (!items.length) continue;
-    tlhtml += "<div class='tag-group'><div class='tag-badge' style='background:"+tg.bg+";color:"+tg.t+";border:1px solid "+tg.b+"'>"+tg.label+"</div>";
-    for (var ii=0; ii<items.length; ii++) {
-      var ti2=items[ii], chk2=S.checked.indexOf(ti2.id)>=0;
-      tlhtml += "<div class='task-row'><span class='chk'>"+(chk2?"✓":"")+"</span><span class='"+(chk2?"done":"")+"'>"+ti2.text+"</span></div>";
-    }
-    tlhtml += "</div>";
-  }
-  var noTag = allTasks.filter(function(t){ return !t.tag; });
-  if (noTag.length) {
-    tlhtml += "<div class='tag-group'><div class='tag-label-etc'>기타</div>";
-    for (var ni=0; ni<noTag.length; ni++) {
-      var nt=noTag[ni], nchk=S.checked.indexOf(nt.id)>=0;
-      tlhtml += "<div class='task-row'><span class='chk'>"+(nchk?"✓":"")+"</span><span class='"+(nchk?"done":"")+"'>"+nt.text+"</span></div>";
-    }
-    tlhtml += "</div>";
-  }
-  if (allTasks.length === 0) tlhtml = "<p class='empty'>없음</p>";
-  return "<div class='page'><div class='page-title'>✏️ 플래닝 — " + dateStr + "</div><div class='two-col'><div><div class='section-title'>⭐ BIG 3</div>" + b3html + "</div><div><div class='section-title'>📝 할 일</div>" + tlhtml + "</div></div></div>";
-}
-
-function makeTablePageHTML(dateStr, col) {
-  var tbId = col === "plan" ? "tbodyPlan" : "tbodyDone";
-  var tblId = col === "plan" ? "tblPlan" : "tblDone";
-  var tbl = document.getElementById(tblId);
-  var tableHTML = tbl ? tbl.outerHTML : "";
-  var label = col === "plan" ? "📋 플랜" : "✅ 던";
-  return "<div class='page'><div class='page-title'>" + label + " — " + dateStr + "</div>" + tableHTML + "</div>";
+function capturePanel(id) {
+  var el = document.getElementById(id);
+  if (!el) return "";
+  return el.innerHTML;
 }
 
 function makePrintHTML() {
   var dateStr = document.getElementById("todayLabel").textContent;
   var memoVal = document.getElementById("memoArea") ? document.getElementById("memoArea").value : "";
-  var css = "* { -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; margin:0; padding:0; }" +
-    "body { font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 12px; color: #1A1A1A; }" +
-    "@page { size: A4 portrait; margin: 10mm; }" +
-    ".page { page-break-after: always; padding: 2mm; min-height: 1px; }" +
-    ".page:last-child { page-break-after: auto; }" +
-    ".page-title { font-size:14px; font-weight:800; color:#2A2118; border-bottom:2px solid #E0D8CC; padding-bottom:5px; margin-bottom:8px; }" +
-    "table { width:100%; border-collapse:collapse; font-size:8px; }" +
-    "thead tr:first-child { background:#2A2118 !important; color:#F0EDE8 !important; -webkit-print-color-adjust:exact; }" +
-    "thead tr:last-child { background:#352A20 !important; color:#C4BAA0 !important; }" +
-    "th, td { padding:2px 3px; border:1px solid #E0D8CC; vertical-align:top; }" +
-    "td { background-color: inherit !important; }" +
-    ".chip { display:inline-block; padding:1px 4px; border-radius:4px; font-size:7px; font-weight:700; overflow:hidden; white-space:nowrap; max-width:100%; }" +
-    ".memo-box { margin-top:8px; padding:8px; border:1px solid #E0D8CC; font-size:12px; white-space:pre-wrap; min-height:40px; }" +
-    ".two-col { display:grid; grid-template-columns:1fr 1fr; gap:10mm; }" +
-    ".section-title { font-size:13px; font-weight:800; color:#2A2118; border-bottom:1.5px solid #E0D8CC; padding-bottom:4px; margin-bottom:8px; }" +
-    ".tag-group { margin-bottom:8px; }" +
-    ".tag-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-bottom:4px; }" +
-    ".tag-label-etc { font-size:10px; font-weight:700; color:#888; margin-bottom:4px; }" +
-    ".task-row { display:flex; align-items:center; gap:6px; padding:2px; font-size:12px; }" +
-    ".chk { width:13px; height:13px; border:1.5px solid #888; border-radius:3px; display:inline-flex; align-items:center; justify-content:center; font-size:9px; flex-shrink:0; }" +
-    ".done { text-decoration:line-through; color:#aaa; }" +
-    ".empty { color:#aaa; font-size:11px; }";
+  var W = 390; // 스마트폰 너비(px)
 
-  // 4페이지: 플래닝 / 플랜 / 던 / 메모
-  var p1 = makeTaskHTML(dateStr);
-  var p2 = makeTablePageHTML(dateStr, "plan");
-  var p3 = makeTablePageHTML(dateStr, "done");
-  var p4 = "<div class='page'><div class='page-title'>📝 메모 — " + dateStr + "</div>" +
-    "<div class='memo-box'>" + (memoVal || "<span style='color:#aaa'>내용 없음</span>") + "</div></div>";
+  // 현재 페이지의 모든 스타일 가져오기
+  var styles = "";
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    try {
+      var rules = sheets[i].cssRules || sheets[i].rules;
+      for (var j = 0; j < rules.length; j++) { styles += rules[j].cssText + "\n"; }
+    } catch(e) {}
+  }
 
-  return "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>" + css + "</style></head><body>" + p1 + p2 + p3 + p4 + "</body></html>";
+  // 각 탭 HTML 캡처
+  var planHTML = document.getElementById("leftPanel") ? document.getElementById("leftPanel").outerHTML : "";
+  var tplanHTML = document.getElementById("wrapPlan") ? document.getElementById("wrapPlan").outerHTML : "";
+  var tdoneHTML = document.getElementById("wrapDone") ? document.getElementById("wrapDone").outerHTML : "";
+
+  // wrapDone display:none 제거
+  tdoneHTML = tdoneHTML.replace(/style="display:none[^"]*"/, "");
+
+  var pageStyle =
+    "* { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }" +
+    "@page { size: " + W + "px auto; margin: 0; }" +
+    "body { margin:0; padding:0; width:" + W + "px; background:#F0EDE8; }" +
+    ".page { width:" + W + "px; page-break-after:always; overflow:hidden; }" +
+    ".page:last-child { page-break-after:auto; }" +
+    ".page-label { background:#2A2118; color:#F0EDE8; font-family:Nunito,Arial,sans-serif; font-size:12px; font-weight:800; padding:8px 12px; }" +
+    // 탭바/헤더 숨기기
+    "header, nav.mobtabs { display:none !important; }" +
+    // 왼쪽 패널 풀너비
+    ".left { width:100% !important; display:flex !important; flex-direction:column; overflow:visible !important; height:auto !important; }" +
+    ".right { width:100% !important; display:flex !important; flex-direction:column; overflow:visible !important; height:auto !important; }" +
+    ".table-wrap { overflow:visible !important; height:auto !important; border-radius:0 !important; }" +
+    ".workspace { display:block !important; height:auto !important; overflow:visible !important; }" +
+    // 버튼 숨기기
+    "button.tcbtn, button.dbtn, button.arow button, .cdel, .sdel, .arow { display:none !important; }" +
+    ".add-row { display:none !important; }";
+
+  return "<!DOCTYPE html><html><head><meta charset='UTF-8'>" +
+    "<link href='https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap' rel='stylesheet'>" +
+    "<style>" + styles + pageStyle + "</style></head><body>" +
+    "<div class='page'><div class='page-label'>✏️ 플래닝 — " + dateStr + "</div>" + planHTML + "</div>" +
+    "<div class='page'><div class='page-label'>📋 플랜 — " + dateStr + "</div>" + tplanHTML + "</div>" +
+    "<div class='page'><div class='page-label'>✅ 던 — " + dateStr + "</div>" + tdoneHTML + "</div>" +
+    "<div class='page'><div class='page-label'>📝 메모 — " + dateStr + "</div>" +
+      "<div style='padding:12px;font-family:Nunito,Arial,sans-serif;font-size:14px;white-space:pre-wrap;min-height:200px;background:#FDFCF9;'>" +
+      (memoVal || "<span style='color:#aaa'>내용 없음</span>") + "</div></div>" +
+    "</body></html>";
 }
 
 function printPDF() {
-  var w = window.open("", "_blank", "width=800,height=600");
+  var w = window.open("", "_blank");
   if (!w) { alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요."); return; }
   w.document.write(makePrintHTML());
   w.document.close();
   w.focus();
-  setTimeout(function(){ w.print(); }, 800);
+  setTimeout(function(){ w.print(); }, 1200);
 }
 
 var saveTimer = null;
