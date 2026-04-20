@@ -88,7 +88,7 @@ button.hbtn{padding:5px 13px;border-radius:20px;font-family:'Nunito',sans-serif;
 
 .memo-wrap{flex-shrink:0;background:var(--card);border-radius:0;border:none;border-top:1px solid var(--line);padding:12px;}
 .memo-panel{display:none;flex-direction:column;flex:1;overflow:hidden;width:100%;}
-.memo-panel .memo-wrap{flex:1;display:flex;flex-direction:column;height:100%;border-radius:0;border:none;padding:12px;}
+.memo-panel .memo-wrap{flex:1;display:flex;flex-direction:column;min-height:0;border-radius:0;border:none;padding:12px;background:var(--card);}
 .memo-panel .memo-ta{flex:1;min-height:0;max-height:none;height:100%;}
 .memo-head{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--ink2);margin-bottom:7px;}
 textarea.memo-ta{width:100%;min-height:68px;max-height:120px;padding:9px;resize:vertical;outline:none;background:var(--row);border:1.5px solid var(--line);border-radius:10px;font-family:'Nunito',sans-serif;font-size:12px;line-height:1.7;color:var(--ink);}
@@ -298,11 +298,11 @@ nav.mobtabs{display:flex;flex-direction:row;align-items:center;flex-shrink:0;bac
 #cTasks{flex:none!important;}
 .right{width:100%;flex:1;display:none;flex-direction:column;border-radius:0;gap:0;overflow:hidden;}
 .right.mob{display:flex;}
-.memo-panel{width:100%;display:none;flex:1;flex-direction:column;}
-.memo-panel.mob{display:flex;}
+.memo-panel{width:100%;display:none;flex-direction:column;}
+.memo-panel.mob{display:flex;flex:1;height:100%;}
 .table-wrap{border-radius:0;border:none;box-shadow:none;flex:1;overflow:auto;}
 .memo-wrap{border-radius:0;border:none;border-top:1px solid var(--line);padding:10px;}
-textarea.memo-ta{min-height:48px;max-height:70px;}
+textarea.memo-ta{min-height:0;max-height:none;flex:1;}
 td.td-h{font-size:10px;padding:0 4px;width:40px;}
 .th-h{width:40px;}
 .modal-box,.mbox{width:96vw!important;max-width:96vw!important;}
@@ -1929,16 +1929,35 @@ function capturePanel(id) {
   return el.innerHTML;
 }
 
-function makePrintHTML() {
+function makeSectionHTML(label, content, styles) {
+  var extra =
+    "* { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; box-sizing:border-box; }" +
+    "@page { size: 390px auto; margin: 0; }" +
+    "html, body { margin:0; padding:0; background:#F0EDE8; width:390px; }" +
+    ".left, .right { display:block !important; width:390px !important; height:auto !important; overflow:visible !important; flex:none !important; }" +
+    ".table-wrap { overflow:visible !important; height:auto !important; border-radius:0 !important; border:none !important; box-shadow:none !important; }" +
+    "table { width:390px !important; border-collapse:collapse; }" +
+    "th, td { border:1px solid #E0D8CC !important; padding:2px 3px; font-size:9px; }" +
+    "thead tr:first-child { background:#2A2118 !important; color:#F0EDE8 !important; }" +
+    "thead tr:last-child { background:#352A20 !important; color:#C4BAA0 !important; }" +
+    "header, nav.mobtabs, button.tcbtn, .arow, .dbtn, .cdel, .sdel, .chip-tooltip, .add-row { display:none !important; }" +
+    ".pdf-label { background:#2A2118 !important; color:#F0EDE8 !important; font-family:Nunito,Arial,sans-serif; font-size:13px; font-weight:800; padding:10px 14px; }";
+  return "<!DOCTYPE html><html><head><meta charset='UTF-8'>" +
+    "<link href='https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap' rel='stylesheet'>" +
+    "<style>" + styles + extra + "</style></head><body>" +
+    "<div class='pdf-label'>" + label + "</div>" + content +
+    "</body></html>";
+}
+
+function printPDF() {
   var dateStr = document.getElementById("todayLabel").textContent;
   var memoVal = document.getElementById("memoArea") ? document.getElementById("memoArea").value : "";
 
-  // 각 탭 HTML 캡처
   var planHTML = document.getElementById("leftPanel") ? document.getElementById("leftPanel").innerHTML : "";
   var tplanHTML = document.getElementById("tblPlan") ? document.getElementById("tblPlan").outerHTML : "";
   var tdoneHTML = document.getElementById("tblDone") ? document.getElementById("tblDone").outerHTML : "";
 
-  // 현재 페이지 스타일 가져오기
+  // 현재 스타일 가져오기
   var styles = "";
   try {
     var sheets = document.styleSheets;
@@ -1950,42 +1969,47 @@ function makePrintHTML() {
     }
   } catch(e) {}
 
-  var extra =
-    "* { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; box-sizing:border-box; }" +
-    "@page { size: 390px auto; margin: 0; }" +
-    "html, body { margin:0; padding:0; background:#F0EDE8; }" +
-    // 각 섹션 페이지 분리
-    ".pdf-section { width:390px; page-break-after:always; page-break-inside:avoid; overflow:visible; }" +
-    ".pdf-section:last-child { page-break-after:auto; }" +
-    ".pdf-label { background:#2A2118 !important; color:#F0EDE8 !important; font-family:Nunito,Arial,sans-serif; font-size:13px; font-weight:800; padding:10px 14px; -webkit-print-color-adjust:exact; }" +
-    // 패널 기본 스타일 재정의
-    ".left, .right, .memo-panel { display:block !important; width:390px !important; height:auto !important; overflow:visible !important; flex:none !important; border-radius:0; }" +
-    ".workspace { display:block !important; height:auto !important; overflow:visible !important; }" +
-    ".table-wrap { overflow:visible !important; height:auto !important; border-radius:0 !important; border:none !important; box-shadow:none !important; }" +
-    "table { width:390px !important; }" +
-    // 불필요한 요소 숨기기
-    "header, nav.mobtabs, button.tcbtn, .arow, .dbtn, .cdel, .sdel, .chip-tooltip { display:none !important; }";
+  // 탭 선택 팝업
+  var choice = confirm("4개 탭을 순서대로 각각 저장하려면 확인을 누르세요.\n\n현재 탭만 저장하려면 취소를 누르세요.");
 
-  return "<!DOCTYPE html><html><head><meta charset='UTF-8'>" +
-    "<link href='https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap' rel='stylesheet'>" +
-    "<style>" + styles + extra + "</style></head><body>" +
-    "<div class='pdf-section'><div class='pdf-label'>✏️ 플래닝 — " + dateStr + "</div><div class='left'>" + planHTML + "</div></div>" +
-    "<div class='pdf-section'><div class='pdf-label'>📋 플랜 — " + dateStr + "</div>" + tplanHTML + "</div>" +
-    "<div class='pdf-section'><div class='pdf-label'>✅ 던 — " + dateStr + "</div>" + tdoneHTML + "</div>" +
-    "<div class='pdf-section'><div class='pdf-label'>📝 메모 — " + dateStr + "</div>" +
-      "<div style='padding:14px;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:1.7;white-space:pre-wrap;background:#FDFCF9;min-height:300px;'>" +
-      (memoVal ? memoVal.replace(/</g,"&lt;").replace(/>/g,"&gt;") : "<span style='color:#aaa'>내용 없음</span>") +
-      "</div></div>" +
-    "</body></html>";
-}
-
-function printPDF() {
-  var w = window.open("", "_blank");
-  if (!w) { alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요."); return; }
-  w.document.write(makePrintHTML());
-  w.document.close();
-  w.focus();
-  setTimeout(function(){ w.print(); }, 1500);
+  if (choice) {
+    // 순서대로 각 창 열기
+    var tabs = [
+      { label: "✏️ 플래닝 — " + dateStr, html: "<div class='left'>" + planHTML + "</div>" },
+      { label: "📋 플랜 — " + dateStr, html: tplanHTML },
+      { label: "✅ 던 — " + dateStr, html: tdoneHTML },
+      { label: "📝 메모 — " + dateStr, html: "<div style='padding:14px;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:1.7;white-space:pre-wrap;background:#FDFCF9;min-height:400px;'>" + (memoVal ? memoVal.replace(/</g,"&lt;").replace(/>/g,"&gt;") : "<span style=\'color:#aaa\'>내용 없음</span>") + "</div>" }
+    ];
+    var idx = 0;
+    function openNext() {
+      if (idx >= tabs.length) return;
+      var w = window.open("", "_blank");
+      if (!w) { alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요."); return; }
+      w.document.write(makeSectionHTML(tabs[idx].label, tabs[idx].html, styles));
+      w.document.close();
+      idx++;
+      setTimeout(function() { w.print(); }, 800);
+      if (idx < tabs.length) setTimeout(openNext, 2000);
+    }
+    openNext();
+  } else {
+    // 현재 탭만
+    var curTab = document.querySelector(".mtab.active");
+    var curTabId = curTab ? curTab.dataset.tab : "tplan";
+    var lbl, cnt;
+    if (curTabId === "plan") { lbl = "✏️ 플래닝"; cnt = "<div class='left'>" + planHTML + "</div>"; }
+    else if (curTabId === "tdone") { lbl = "✅ 던"; cnt = tdoneHTML; }
+    else if (curTabId === "memo") {
+      lbl = "📝 메모";
+      cnt = "<div style='padding:14px;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:1.7;white-space:pre-wrap;background:#FDFCF9;min-height:400px;'>" + (memoVal ? memoVal.replace(/</g,"&lt;").replace(/>/g,"&gt;") : "<span style=\'color:#aaa\'>내용 없음</span>") + "</div>";
+    }
+    else { lbl = "📋 플랜"; cnt = tplanHTML; }
+    var w = window.open("", "_blank");
+    if (!w) { alert("팝업이 차단되었습니다."); return; }
+    w.document.write(makeSectionHTML(lbl + " — " + dateStr, cnt, styles));
+    w.document.close();
+    setTimeout(function(){ w.print(); }, 800);
+  }
 }
 
 var saveTimer = null;
