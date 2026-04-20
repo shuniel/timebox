@@ -287,36 +287,36 @@ nav.mobtabs{display:flex;flex-direction:row;align-items:center;flex-shrink:0;bac
 .mtab.active{background:rgba(255,255,255,.12);color:#FDF8F0;}
 @media(min-width:768px){ nav.mobtabs{display:none;} }
 
-@media(max-width:767px){
-  :root{--cw:100px;}
-  /* nav.mobtabs always flex */
-  /* memo-panel은 showTab으로 제어 */
-  .workspace{padding:0;gap:0;overflow:hidden;}
-  /* Left panel: full width scrollable, all cards visible */
-  .left{width:100%;height:100%;display:none;overflow-y:auto;padding:10px 10px 12px;border-radius:0;border:none;box-shadow:none;background:var(--bg);flex:none;}
-  .left.mob{display:flex;}
-  /* All cards always visible in mobile left panel */
-  .left.mob .card{display:block!important;}
-  /* Tasks card: don't use flex:1 on mobile */
-  #cTasks{flex:none!important;}
-  .right{display:none;border-radius:0;gap:0;overflow:hidden;}
-  .right.mob{display:flex;}
-  .table-wrap{border-radius:0;border:none;box-shadow:none;}
-  .memo-wrap{border-radius:0;border:none;border-top:1px solid var(--line);padding:10px;}
-  textarea.memo-ta{min-height:48px;max-height:70px;}
-  td.td-h{font-size:10px;padding:0 4px;width:44px;}
-  .th-h{width:44px;}
-  .hbtn-obs .obs-txt{display:none;}
-  .hbtn-obs::after{content:"📋";}
-  .hbtn-obs{padding:5px 10px;}
-  .hbtn-pdf .pdf-txt{display:none;}
-  .hbtn-pdf::after{content:"🖨";}
-  .hbtn-pdf{padding:5px 10px;}
-  .modal-box,.mbox{width:96vw!important;max-width:96vw!important;}
-  /* Compact header on mobile */
-  .logo{font-size:14px;}
-  .dnav-label{font-size:10px;min-width:90px;}
-  .hbtn-save .save-txt{display:none;}
+/* ── 모바일 전용 레이아웃 (항상 적용) ── */
+:root{--cw:72px;}
+.workspace{padding:0;gap:0;overflow:hidden;flex:1;}
+/* 패널 기본: 숨김 */
+.left{width:100%;flex:1;display:none;overflow-y:auto;padding:10px 10px 12px;border-radius:0;border:none;box-shadow:none;background:var(--bg);}
+.left.mob{display:flex;flex-direction:column;}
+.left.mob .card{display:block!important;}
+#cTasks{flex:none!important;}
+.right{flex:1;display:none;flex-direction:column;border-radius:0;gap:0;overflow:hidden;}
+.right.mob{display:flex;}
+.memo-panel{display:none;flex:1;flex-direction:column;}
+.memo-panel.mob{display:flex;}
+.table-wrap{border-radius:0;border:none;box-shadow:none;flex:1;overflow:auto;}
+.memo-wrap{border-radius:0;border:none;border-top:1px solid var(--line);padding:10px;}
+textarea.memo-ta{min-height:48px;max-height:70px;}
+td.td-h{font-size:10px;padding:0 4px;width:40px;}
+.th-h{width:40px;}
+.modal-box,.mbox{width:96vw!important;max-width:96vw!important;}
+.logo{font-size:14px;}
+.dnav-label{font-size:10px;min-width:80px;}
+/* PC에서는 원래 레이아웃 */
+@media(min-width:768px){
+  :root{--cw:120px;}
+  .workspace{padding:9px;gap:9px;}
+  .left{display:flex;width:272px;flex:none;}
+  .right{display:flex;}
+  .memo-panel{display:none;}
+  nav.mobtabs{display:none;}
+  td.td-h{font-size:12px;padding:0 6px;width:54px;}
+  .th-h{width:54px;}
 }
 
 /* print handled by popup window */
@@ -677,9 +677,7 @@ if (document.readyState === "loading") {
 
 /* ── MOBILE LAYOUT ──────────────────────── */
 function initMob() {
-  if (window.innerWidth < 768) {
-    showTab("tplan");
-  }
+  showTab("tplan");
 }
 
 function showTab(tab) {
@@ -692,19 +690,15 @@ function showTab(tab) {
   // 모든 패널 숨기기
   left.classList.remove("mob");
   right.classList.remove("mob");
-  right.style.display = "none";
-  memoPanel.style.display = "none";
+  memoPanel.classList.remove("mob");
 
   if (tab === "tplan" || tab === "tdone") {
-    right.style.display = "";
     right.classList.add("mob");
     wrapPlan.style.display = (tab === "tplan") ? "" : "none";
     wrapDone.style.display = (tab === "tdone") ? "" : "none";
   } else if (tab === "memo") {
-    memoPanel.style.display = "flex";
+    memoPanel.classList.add("mob");
   } else {
-    // plan (플래닝)
-    right.style.display = "";
     left.classList.add("mob");
   }
   var tabs = document.querySelectorAll(".mtab");
