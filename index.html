@@ -299,10 +299,43 @@ nav.mobtabs{display:flex;flex-direction:row;align-items:center;flex-shrink:0;bac
 .right{width:100%;flex:1;display:none;flex-direction:column;border-radius:0;gap:0;overflow:hidden;}
 .right.mob{display:flex;}
 .memo-panel{width:100%;display:none;flex-direction:column;}
-.memo-panel.mob{display:flex;flex:1;height:100%;}
+.memo-panel.mob{
+  display:flex !important;
+  position:fixed !important;
+  top:52px !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:72px !important;
+  z-index:50;
+  background:var(--card);
+  flex-direction:column;
+}
+.memo-panel.mob .memo-wrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  padding:12px;
+  min-height:0;
+}
+.memo-panel.mob .memo-ta{
+  flex:1;
+  width:100%;
+  resize:none;
+  min-height:0;
+  max-height:none;
+  height:100% !important;
+  font-size:15px;
+  line-height:1.8;
+  padding:10px;
+  border:1.5px solid var(--line);
+  border-radius:10px;
+  background:var(--row);
+  color:var(--ink);
+  font-family:'Nunito',sans-serif;
+}
 .table-wrap{border-radius:0;border:none;box-shadow:none;flex:1;overflow:auto;}
 .memo-wrap{border-radius:0;border:none;border-top:1px solid var(--line);padding:10px;}
-textarea.memo-ta{min-height:0;max-height:none;flex:1;}
+/* memo-ta: memo-panel.mob에서 정의 */
 td.td-h{font-size:10px;padding:0 4px;width:40px;}
 .th-h{width:40px;}
 .modal-box,.mbox{width:96vw!important;max-width:96vw!important;}
